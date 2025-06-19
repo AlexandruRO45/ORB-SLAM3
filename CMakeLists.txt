@@ -1,15 +1,15 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.4...3.18)
 project(orbslam3)
 
- set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
- message(STATUS "Using flag -std=c++14.")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+message(STATUS "Using flag -std=c++14.")
 
 LIST(APPEND CMAKE_MODULE_PATH 
     ${PROJECT_SOURCE_DIR}/cmake
 )
 
 add_subdirectory(third_party/pybind11)
-add_subdirectory(third_party/ORB_SLAM3)
+add_subdirectory(third_party/ORB_SLAM3_engine)
 
 pybind11_add_module(orbslam3 
     src/ORBSLAM3Wrapper.cpp
@@ -30,10 +30,10 @@ target_include_directories(orbslam3
 PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3/include>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3/include/CameraModels>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3/Thirdparty/g2o>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3/Thirdparty/DBoW2>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3/Thirdparty/Sophus>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3_engine>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3_engine/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3_engine/include/CameraModels>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3_engine/Thirdparty/DBoW2>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3_engine/Thirdparty/g2o>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party/ORB_SLAM3_engine/Thirdparty/Sophus>
 )

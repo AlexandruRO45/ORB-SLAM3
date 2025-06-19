@@ -32,11 +32,17 @@ class CMakeBuild(build_ext):
         subprocess.check_call(
             ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp)
         subprocess.check_call(
-            ["cmake", "--build", ".", "-j12"], cwd=self.build_temp)
+            ["cmake", "--build", ".", "-j8"], cwd=self.build_temp)
 
 
 setup(
     name="orbslam3",
+    version="1.1.0",
+    description='SLAM and Global VO module for VNAV project',
+    long_description="This package provides Python bindings for the ORB-SLAM3 visual SLAM system, allowing users to integrate SLAM functionalities into Python applications.",
+    maintainer='Alex S.',
+    maintainer_email='alexandru.sava@interactive.ro',
+    license='TODO: License declaration',
     install_requires=["numpy"],
     ext_modules=[CMakeExtension("orbslam3")],
     cmdclass={"build_ext": CMakeBuild},
