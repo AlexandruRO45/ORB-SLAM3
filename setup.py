@@ -32,7 +32,7 @@ class CMakeBuild(build_ext):
         subprocess.check_call(
             ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp)
         subprocess.check_call(
-            ["cmake", "--build", ".", "-j"], cwd=self.build_temp)
+            ["cmake", "--build", ".", "-j12"], cwd=self.build_temp)
 
 
 setup(
