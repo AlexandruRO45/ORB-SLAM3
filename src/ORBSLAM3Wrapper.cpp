@@ -57,7 +57,7 @@ bool ORBSLAM3Python::processMono(cv::Mat image, double timestamp)
     }
     if (image.data)
     {
-        Sophus::SE3f pose = system->TrackMonocular(image, timestamp);
+        pose = system->TrackMonocular(image, timestamp);
         return !system->isLost();
     }
     else
@@ -75,7 +75,7 @@ bool ORBSLAM3Python::processStereo(cv::Mat leftImage, cv::Mat rightImage, double
     }
     if (leftImage.data && rightImage.data)
     {
-        auto pose = system->TrackStereo(leftImage, rightImage, timestamp);
+        pose = system->TrackStereo(leftImage, rightImage, timestamp);
         return !system->isLost();
     }
     else
@@ -93,7 +93,7 @@ bool ORBSLAM3Python::processRGBD(cv::Mat image, cv::Mat depthImage, double times
     }
     if (image.data && depthImage.data)
     {
-        auto pose = system->TrackRGBD(image, depthImage, timestamp);
+        pose = system->TrackRGBD(image, depthImage, timestamp);
         return !system->isLost();
     }
     else
@@ -108,6 +108,16 @@ void ORBSLAM3Python::shutdown()
     {
         system->Shutdown();
     }
+}
+
+py::array_t<short> ORBSLAM3Python::get2DOccMap() const
+{
+    auto map = system->Get2DOccMap();
+    return py::array_t<short>(
+        {map.m_height, map.m_width}, //shape
+        {map.m_width*2, 2}, //strides
+        &map.data.front()
+        );
 }
 
 void ORBSLAM3Python::setUseViewer(bool useViewer)
@@ -150,5 +160,7 @@ PYBIND11_MODULE(orbslam3, m)
         .def("is_running", &ORBSLAM3Python::isRunning)
         .def("reset", &ORBSLAM3Python::reset)
         .def("set_use_viewer", &ORBSLAM3Python::setUseViewer)
-        .def("get_trajectory", &ORBSLAM3Python::getTrajectory);
+        .def("get_pose", &ORBSLAM3Python::get_pose)
+        .def("get_trajectory", &ORBSLAM3Python::getTrajectory)
+        .def("get_2d_occmap", &ORBSLAM3Python::get2DOccMap);
 }
