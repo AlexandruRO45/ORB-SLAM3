@@ -2,7 +2,8 @@ import os
 import subprocess
 import sys
 import numpy as np
-from setuptools import Extension, setup
+# Make sure to import find_packages
+from setuptools import Extension, setup, find_packages
 from setuptools.command.build_ext import build_ext
 
 
@@ -37,14 +38,15 @@ class CMakeBuild(build_ext):
 
 setup(
     name="orbslam3",
-    version="1.1.0",
+    version="1.2.1",
     description='SLAM and Global VO module for VNAV project',
     long_description="This package provides Python bindings for the ORB-SLAM3 visual SLAM system, allowing users to integrate SLAM functionalities into Python applications.",
     maintainer='Alex S.',
     maintainer_email='alexandru.sava@interactive.ro',
     license='TODO: License declaration',
     install_requires=["numpy"],
-    ext_modules=[CMakeExtension("orbslam3")],
+    ext_modules=[CMakeExtension("orbslam3._internal")],
+    packages=["orbslam3"],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},

@@ -4,3 +4,4 @@ outputs/
 examples/
 dist/
 __pycache__
+.conda/

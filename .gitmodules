@@ -1,6 +1,6 @@
 [submodule "third_party/pybind11"]
 	path = third_party/pybind11
-	url = https://github.com/pybind/pybind11.git
+	url = https://github.com/AlexandruRO45/pybind11
 [submodule "third_party/ORB_SLAM3_engine"]
 	path = third_party/ORB_SLAM3_engine
 	url = https://github.com/AlexandruRO45/ORB_SLAM3_engine.git
