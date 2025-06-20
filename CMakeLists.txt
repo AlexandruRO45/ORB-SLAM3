@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.4...3.18)
 project(orbslam3)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-message(STATUS "Using flag -std=c++14.")
+# Set the C++ standard
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+message(STATUS "Using C++ standard: ${CMAKE_CXX_STANDARD}")
 
 LIST(APPEND CMAKE_MODULE_PATH 
     ${PROJECT_SOURCE_DIR}/cmake

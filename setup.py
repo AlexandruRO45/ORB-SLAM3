@@ -26,7 +26,7 @@ class CMakeBuild(build_ext):
             
         # Extract ORBvoc.txt.tar.gz before CMake (or after, if CMake moves it)
         vocab_src = os.path.join(ext.sourcedir, "third_party", "ORB_SLAM3_engine", "Vocabulary", "ORBvoc.txt.tar.gz")
-        vocab_dst_dir = os.path.join(ext.sourcedir, "orbslam3")
+        vocab_dst_dir = os.path.join(ext.sourcedir, "third_party", "ORB_SLAM3_engine", "Vocabulary")
 
         if os.path.exists(vocab_src):
             with tarfile.open(vocab_src, "r:gz") as tar:

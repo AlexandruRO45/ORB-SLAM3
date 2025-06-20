@@ -9,11 +9,11 @@ __author__ = "Alex S."
 __email__ = "savaalexandru562@gmail.com"
 
 try:
-    from .orbslam3 import *  # Import the compiled extension (matches CMake target)
+    from orbslam3 import *  # Import the compiled extension (matches CMake target)
 except ImportError as e:
     raise ImportError(
-        "Failed to import ORB-SLAM3 core module. "
-        "Make sure the package was installed correctly."
+        f"Failed to import ORB-SLAM3 core module: {e}. "
+        "Make sure the package was installed correctly and all dependencies are available."
     ) from e
 
 # You can add convenience functions here
