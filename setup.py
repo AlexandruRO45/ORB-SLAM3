@@ -63,7 +63,7 @@ setup(
     },
     include_package_data=True,
     install_requires=["numpy"],
-    ext_modules=[CMakeExtension("orbslam3.orbslam3")],
+    ext_modules=[CMakeExtension("orbslam3")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
