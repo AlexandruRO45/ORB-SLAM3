@@ -1,0 +1,127 @@
+name: Build and Publish Wheels
+
+# When the workflow will run
+on:
+  # Run on pushes to the main branch
+  push:
+    branches:
+      - main
+      - master
+  # Run on pull requests targeting the main branch
+  pull_request:
+    branches:
+      - main
+      - master
+  # Run when a new release is created (i.e., a tag like v1.2.3 is pushed)
+  release:
+    types: [published]
+  # Allow manual runs from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Define the OSes to build on
+        os: [ubuntu-24.04, windows-2022, macos-13] # macos-13 for x86_64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        # Use this if ORB-SLAM3 engine is a git submodule
+        with:
+          submodules: 'recursive'
+
+      - name: Install C++ Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopencv-dev libeigen3-dev libpangolin-dev libboost-serialization-dev liboctomap-dev libssl-dev cmake
+
+      - name: Install C++ Dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install opencv eigen pangolin cmake
+
+      - name: Install C++ Dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: choco install -y opencv eigen pangolin cmake
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12" # A representative version to run cibuildwheel
+
+      - name: Install cibuildwheel and build dependencies
+        run: pip install cibuildwheel==3.0.* numpy
+
+      - name: Build wheels
+        run: cibuildwheel --output-dir wheelhouse
+        env:
+          # Tell cibuildwheel to install numpy before building the wheel
+          CIBW_BEFORE_BUILD: "pip install numpy"
+          # Skip Python 2.7, 3.6, 3.7 and PyPy
+          CIBW_SKIP: "cp27-* cp36-* cp37-* pp*"
+          # For macOS, build both x86_64 and arm64 (Apple Silicon) wheels
+          # We need a separate job for arm64 on a macos-14 runner
+          CIBW_ARCHS_MACOS: "x86_64"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  build_macos_arm64:
+    name: Build wheels on macOS arm64
+    runs-on: macos-14 # Apple Silicon runner
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install C++ Dependencies
+        run: brew install opencv eigen pangolin cmake
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install cibuildwheel and dependencies
+        run: pip install cibuildwheel==2.19.* numpy
+      - name: Build wheels
+        run: cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BEFORE_BUILD: "pip install numpy"
+          CIBW_SKIP: "cp27-* cp36-* cp37-* pp*"
+          CIBW_ARCHS_MACOS: "arm64"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-arm64
+          path: ./wheelhouse/*.whl
+
+  publish_wheels:
+    name: Publish wheels to PyPI
+    # This job runs only when a new release is published on GitHub
+    if: github.event_name == 'release' && github.event.action == 'published'
+    needs: [build_wheels, build_macos_arm64] # Wait for all build jobs to finish
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/orbslam3
+    permissions:
+      # This permission is required for trusted publishing
+      id-token: write
+
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          # The pattern must match the upload names
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true # Combine all artifacts into one directory
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No password needed due to trusted publishing
