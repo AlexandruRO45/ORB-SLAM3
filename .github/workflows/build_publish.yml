@@ -33,21 +33,21 @@ jobs:
         uses: actions/checkout@v4
         # Use this if ORB-SLAM3 engine is a git submodule
         with:
-          submodules: 'recursive'
+          submodules: "recursive"
 
       - name: Install C++ Dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libopencv-dev libeigen3-dev libpangolin-dev libboost-serialization-dev liboctomap-dev libssl-dev cmake
+          sudo apt-get install -y libopencv-dev libeigen3-dev libboost-serialization-dev liboctomap-dev libssl-dev cmake
 
       - name: Install C++ Dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install opencv eigen pangolin cmake
+        run: brew install opencv eigen cmake
 
       - name: Install C++ Dependencies (Windows)
         if: runner.os == 'Windows'
-        run: choco install -y opencv eigen pangolin cmake
+        run: choco install -y opencv eigen cmake
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -81,7 +81,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install C++ Dependencies
-        run: brew install opencv eigen pangolin cmake
+        run: brew install opencv eigen cmake
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
