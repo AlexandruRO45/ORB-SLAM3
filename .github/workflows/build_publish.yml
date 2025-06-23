@@ -35,13 +35,14 @@ jobs:
         with:
           submodules: "recursive"
 
+      # --- Install OS-specific C++ dependencies ---
       - name: Install C++ Dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install opencv eigen cmake
+        run: brew install opencv eigen pangolin cmake
 
       - name: Install C++ Dependencies (Windows)
         if: runner.os == 'Windows'
-        run: choco install -y opencv eigen cmake
+        run: choco install -y opencv eigen pangolin cmake
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -54,15 +55,27 @@ jobs:
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
         env:
-          # Tell cibuildwheel to install numpy before building the wheel
-          CIBW_BEFORE_ALL_LINUX: >
-            yum install -y epel-release &&
-            yum install -y eigen3-devel opencv-devel boost-devel octomap-devel openssl-devel cmake
+          # --- THIS IS THE CRITICAL FIX FOR LINUX ---
+          # It runs a multi-line script to install system libs and build Pangolin from source.
+          CIBW_BEFORE_ALL_LINUX: |
+            # Step 1: Install base dependencies using yum
+            yum install -y epel-release
+            yum install -y eigen3-devel opencv-devel boost-devel octomap-devel openssl-devel cmake git
+
+            # Step 2: Build Pangolin from source
+            cd /tmp
+            git clone https://github.com/stevenlovegrove/Pangolin.git
+            cd Pangolin
+            # Run Pangolin's own script to install its build dependencies
+            ./scripts/install_prerequisites.sh recommended
+            # Configure, build, and install Pangolin to the system
+            cmake -B build
+            cmake --build build -j$(nproc)
+            cmake --install build
+            # ldconfig # ldconfig might not be available/needed in minimal containers
+
           CIBW_BEFORE_BUILD: "pip install numpy"
-          # Skip Python 2.7, 3.6, 3.7 and PyPy
-          CIBW_SKIP: "cp27-* cp36-* cp37-* pp*"
-          # For macOS, build both x86_64 and arm64 (Apple Silicon) wheels
-          # We need a separate job for arm64 on a macos-14 runner
+          CIBW_SKIP: "cp36-* cp37-* pp*"
           CIBW_ARCHS_MACOS: "x86_64"
 
       - name: Upload artifacts
@@ -72,31 +85,37 @@ jobs:
           path: ./wheelhouse/*.whl
 
   build_macos_arm64:
-    name: Build wheels on macOS arm64
-    runs-on: macos-14 # Apple Silicon runner
+    name: Build wheels on macOS (Apple Silicon)
+    runs-on: macos-14
     steps:
-      - name: Checkout repository
+      - name: Checkout repository code
         uses: actions/checkout@v4
-      - name: Install C++ Dependencies
-        run: brew install opencv eigen cmake
+
+      - name: Install C++ Dependencies (macOS)
+        run: brew install opencv eigen pangolin cmake
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
-      - name: Install cibuildwheel and dependencies
-        run: pip install cibuildwheel==2.19.* numpy
-      - name: Build wheels
+          python-version: '3.10'
+
+      - name: Install build tools
+        run: pip install cibuildwheel==2.19.*
+
+      - name: Build wheels with cibuildwheel
         run: cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_BUILD: "pip install numpy"
-          CIBW_SKIP: "cp27-* cp36-* cp37-* pp*"
+          CIBW_SKIP: "cp36-* cp37-* pp*"
           CIBW_ARCHS_MACOS: "arm64"
-      - name: Upload artifacts
+
+      - name: Upload built wheels as an artifact
         uses: actions/upload-artifact@v4
         with:
           name: wheels-macos-arm64
           path: ./wheelhouse/*.whl
 
+  # This job publishes the wheels to PyPI.
   publish_wheels:
     name: Publish wheels to PyPI
     # This job runs only when a new release is published on GitHub
