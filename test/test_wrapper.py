@@ -1,54 +1,123 @@
-# tests/test_wrapper.py
 import pytest
-import orbslam3 # This will import from the installed or built package
 import numpy as np
-import os
+import orbslam3
 
-# To run these test:
-# 1. pip install pytest
-# 2. Download ORB-SLAM3 vocabulary and a settings file.
-# 3. export ORBSLAM_DATA_PATH=/path/to/your/data
-# 4. Run `pytest` in the terminal from your project's root directory.
+# The slam_system_factory fixture is provided automatically by conftest.py
 
-
-# Mark that this test requires data files, skip if not found
-VOCAB_FILE = os.path.join(os.getenv("ORBSLAM_DATA_PATH", "."), "ORBvoc.txt")
-SETTINGS_FILE = os.path.join(os.getenv("ORBSLAM_DATA_PATH", "."), "TUM1.yaml")
-
-# A decorator to skip tests if essential data files are missing
-requires_data = pytest.mark.skipif(
-    not all(os.path.exists(f) for f in [VOCAB_FILE, SETTINGS_FILE]),
-    reason="Data files (ORBvoc.txt, TUM1.yaml) not found. Set ORBSLAM_DATA_PATH env var."
-)
-
-@requires_data
-def test_slam_initialization():
+def test_enums_exist():
     """
-    Tests if the SLAM system can be initialized without errors.
+    Tests that the enums from C++ are correctly exposed. 
     """
-    try:
-        slam = orbslam3.ORBSLAM3(VOCAB_FILE, SETTINGS_FILE)
-        assert slam is not None, "SLAM object should not be None"
-    except Exception as e:
-        pytest.fail(f"SLAM initialization failed with an exception: {e}")
+    assert hasattr(orbslam3, "Sensor")
+    assert hasattr(orbslam3.Sensor, "MONOCULAR")
+    assert hasattr(orbslam3.Sensor, "STEREO")
+    assert hasattr(orbslam3.Sensor, "RGBD")
 
-@requires_data
-def test_process_frame_dummy_data():
+    assert hasattr(orbslam3, "TrackingState")
+    assert hasattr(orbslam3.TrackingState, "OK")
+    assert hasattr(orbslam3.TrackingState, "LOST")
+
+
+class TestSystemAPI:
     """
-    Tests the frame processing method with dummy data.
-    This is a placeholder - a real test would use actual image data.
+    Test all methods of the 'system' class exposed from C++.
     """
-    slam = orbslam3.ORBSLAM3(VOCAB_FILE, SETTINGS_FILE)
-    
-    # Create a dummy grayscale image (e.g., 640x480)
-    dummy_image = np.zeros((480, 640), dtype=np.uint8)
-    timestamp = 0.0
 
-    try:
-        # Assuming your wrapper has a method like `process_image_mono`
-        pose = slam.process_image_mono(dummy_image, timestamp)
-        assert isinstance(pose, np.ndarray), "Pose should be a numpy array"
-        assert pose.shape == (4, 4), "Pose matrix should be 4x4"
-    except Exception as e:
-        pytest.fail(f"Processing a dummy frame failed with an exception: {e}")
+    def test_initialization_and_running(self, slam_system_factory):
+        """
+        Tests the __init__, initialize(), and is_running() methods. 
+        """
+        slam = slam_system_factory(orbslam3.Sensor.MONOCULAR)
+        # The is_running() method checks if the system pointer is not null. 
+        assert slam.is_running()
 
+    def test_set_use_viewer(self, slam_system_factory):
+        """
+        Tests that calling set_use_viewer() doesn't crash. 
+        """
+        slam = slam_system_factory(orbslam3.Sensor.MONOCULAR)
+        try:
+            slam.set_use_viewer(True)
+            slam.set_use_viewer(False)
+        except Exception as e:
+            pytest.fail(f"set_use_viewer raised an exception: {e}")
+
+    def test_get_pose(self, slam_system_factory):
+        """
+        Tests get_pose() returns a valid 4x4 numpy array. 
+        """
+        slam = slam_system_factory(orbslam3.Sensor.MONOCULAR)
+        dummy_image = np.zeros((480, 640, 3), dtype=np.uint8)
+        
+        # process_image_mono is bound in C++. 
+        slam.process_image_mono(dummy_image, 1.0)
+        
+        pose = slam.get_pose()
+        assert isinstance(pose, np.ndarray)
+        assert pose.shape == (4, 4)
+
+    def test_get_trajectory(self, slam_system_factory):
+        """
+        Tests get_trajectory() returns a list of poses. 
+        """
+        slam = slam_system_factory(orbslam3.Sensor.MONOCULAR)
+        dummy_image = np.zeros((480, 640, 3), dtype=np.uint8)
+        
+        slam.process_image_mono(dummy_image, 1.0)
+        slam.process_image_mono(dummy_image, 2.0)
+        
+        trajectory = slam.get_trajectory()
+        assert isinstance(trajectory, list)
+        # After two frames, we should have keyframes and a trajectory
+        assert len(trajectory) > 0
+        assert all(isinstance(p, np.ndarray) and p.shape == (4, 4) for p in trajectory)
+
+    def test_reset(self, slam_system_factory):
+        """
+        Tests that reset() clears the trajectory. 
+        """
+        slam = slam_system_factory(orbslam3.Sensor.MONOCULAR)
+        dummy_image = np.zeros((480, 640, 3), dtype=np.uint8)
+        
+        slam.process_image_mono(dummy_image, 1.0)
+        slam.process_image_mono(dummy_image, 2.0)
+        
+        # Ensure we have a trajectory before reset
+        trajectory_before = slam.get_trajectory()
+        assert len(trajectory_before) > 0
+
+        # Now reset the system
+        slam.reset()
+        
+        # After reset, the trajectory should be empty
+        trajectory_after = slam.get_trajectory()
+        assert isinstance(trajectory_after, list)
+        assert len(trajectory_after) == 0
+
+    def test_get_2d_occmap(self, slam_system_factory):
+        """
+        Tests get_2d_occmap() returns a 2D numpy array of dtype short. 
+        """
+        slam = slam_system_factory(orbslam3.Sensor.MONOCULAR)
+        # You might need to process some frames for the map to be meaningful
+        dummy_image = np.zeros((480, 640, 3), dtype=np.uint8)
+        slam.process_image_mono(dummy_image, 1.0)
+        
+        occ_map = slam.get_2d_occmap()
+        assert isinstance(occ_map, np.ndarray)
+        assert occ_map.ndim == 2
+        assert occ_map.dtype == np.int16
+
+    def test_shutdown(self, slam_system_factory):
+        """
+        Tests that the explicit shutdown() method can be called without error. 
+        The factory fixture ensures cleanup, but we test the public API here.
+        """
+        slam = slam_system_factory(orbslam3.Sensor.MONOCULAR)
+        assert slam.is_running()
+        try:
+            # We call shutdown explicitly here for the test
+            slam.shutdown()
+        except Exception as e:
+            pytest.fail(f"shutdown() raised an exception: {e}")
+        # Note: The 'slam' object itself still exists, but the internal threads are stopped.

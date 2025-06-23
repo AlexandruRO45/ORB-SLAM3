@@ -1,56 +1,59 @@
-# .github/workflows/build_test.yml
-name: Build and Test orbslam3
+# .github/workflows/build-test.yml
 
+name: Build and Test
+
+# Controls when the workflow will run
 on:
   push:
-    branches: [main, master]
+    branches: [ "main" ] # Runs on pushes to the main branch
   pull_request:
-    branches: [main, master]
-  workflow_dispatch: # Allows manual triggering
+    branches: [ "main" ] # Runs on pull requests targeting the main branch
 
 jobs:
-  build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+  build:
+    # Use a matrix to test on multiple Python versions and operating systems
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04] # Use specific OS versions for stability [W.I.P]  windows-latest, macos-13
+        python-version: ["3.8", "3.10", "3.12"] # Versions from your pyproject.toml
+        os: [ubuntu-latest]
 
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout repository
+      # --- 1. Set up the environment ---
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
-          submodules: "recursive" # This is critical for pulling in ORB_SLAM3_engine
+          # Required for fetching the ORB_SLAM3_engine submodule
+          submodules: 'recursive'
 
-      - name: Set up QEMU (for ARM builds on Linux)
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          platforms: all
+          python-version: ${{ matrix.python-version }}
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0
-        env:
-          # Install system-level dependencies for ORB-SLAM3 on Linux before building
-          CIBW_BEFORE_BUILD_LINUX: >
-            apt-get update && apt-get install -y
-            libeigen3-dev
-            libopencv-dev
-            libboost-serialization-dev 
-            liboctomap-dev 
-            libssl-dev
+      # --- 2. Install Dependencies ---
+      - name: Install system dependencies
+        run: |
+          chmod +x ./apt-dependencies.sh
+          sudo ./apt-dependencies.sh
 
-          # Skip architectures that might not be supported by dependencies
-          CIBW_ARCHS_LINUX: "auto aarch64"
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
-          CIBW_ARCHS_WINDOWS: "AMD64"
+      - name: Install Python build tools and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Installs project in editable mode and pytest/numpy from optional-dependencies
+          pip install -e .[test]
 
-          # Skip musl builds as they often have linking issues with complex C++
-          CIBW_SKIP: "*-musllinux_*"
+      # --- 3. Prepare Test Data ---
+      - name: Download and set up test dataset
+        run: |
+          wget https://vision.in.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_xyz.tgz
+          tar -xvf rgbd_dataset_freiburg1_xyz.tgz
+          mkdir -p test/data/TUM1_xyz/rgb
+          find rgbd_dataset_freiburg1_xyz/rgb -name "*.png" | sort | head -n 10 | xargs -I {} cp {} test/data/TUM1_xyz/rgb/
+          rm -rf rgbd_dataset_freiburg1_xyz.tgz rgbd_dataset_freiburg1_xyz
 
-      - name: Store artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-wheels-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
+      # --- 4. Run Tests ---
+      - name: Run Pytest
+        run: |
+          pytest
