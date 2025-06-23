@@ -11,7 +11,7 @@ parser.add_argument("--dataset_path", required=True)
 args = parser.parse_args()
 
 img_files = sorted(glob(os.path.join(args.dataset_path, 'rgb/*.png')))
-slam = orbslam3.system(args.vocab_file, args.settings_file, orbslam3.Sensor.MONOCULAR)
+slam = orbslam3.System(args.vocab_file, args.settings_file, orbslam3.Sensor.MONOCULAR)
 slam.set_use_viewer(True)
 slam.initialize()
 

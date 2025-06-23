@@ -13,22 +13,24 @@ LIST(APPEND CMAKE_MODULE_PATH
 add_subdirectory(third_party/pybind11)
 add_subdirectory(third_party/ORB_SLAM3_engine)
 
-pybind11_add_module(orbslam3 
+pybind11_add_module(_core 
     src/ORBSLAM3Wrapper.cpp
     src/NDArrayConverter.cpp
 )
 
-target_link_libraries(orbslam3
+set_target_properties(_core PROPERTIES PREFIX "")
+
+target_link_libraries(_core
 PRIVATE
     ORB_SLAM3
 )
 
-target_compile_definitions(orbslam3 
+target_compile_definitions(_core 
 PRIVATE 
     VERSION_INFO=${EXAMPLE_VERSION_INFO}
 )
 
-target_include_directories(orbslam3
+target_include_directories(_core
 PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party>
