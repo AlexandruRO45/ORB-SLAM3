@@ -35,12 +35,6 @@ jobs:
         with:
           submodules: "recursive"
 
-      - name: Install C++ Dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libopencv-dev libeigen3-dev libboost-serialization-dev liboctomap-dev libssl-dev cmake
-
       - name: Install C++ Dependencies (macOS)
         if: runner.os == 'macOS'
         run: brew install opencv eigen cmake
@@ -61,6 +55,9 @@ jobs:
         run: cibuildwheel --output-dir wheelhouse
         env:
           # Tell cibuildwheel to install numpy before building the wheel
+          CIBW_BEFORE_ALL_LINUX: >
+            yum install -y epel-release &&
+            yum install -y eigen3-devel opencv-devel boost-devel octomap-devel openssl-devel pangolin-devel cmake
           CIBW_BEFORE_BUILD: "pip install numpy"
           # Skip Python 2.7, 3.6, 3.7 and PyPy
           CIBW_SKIP: "cp27-* cp36-* cp37-* pp*"
