@@ -1,143 +1,191 @@
-name: Build and Publish Wheels
+# The name of your GitHub Actions workflow.
+name: Build and Publish Python Wheels
 
-# When the workflow will run
+# Controls when the workflow will run.
 on:
-  # Run on pushes to the main branch
   push:
-    branches:
-      - main
-      - master
-  # Run on pull requests targeting the main branch
+    branches: ["main", "master"]
   pull_request:
-    branches:
-      - main
-      - master
-  # Run when a new release is created (i.e., a tag like v1.2.3 is pushed)
+    branches: ["main", "master"]
   release:
     types: [published]
-  # Allow manual runs from the Actions tab
   workflow_dispatch:
 
 jobs:
+  # ===================================================================
+  # NATIVE BUILDS (Linux, macOS, Windows) with "Build from Source"
+  # ===================================================================
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # Define the OSes to build on
-        os: [ubuntu-24.04, windows-2022, macos-13] # macos-13 for x86_64
+        os: [ubuntu-22.04, windows-2022, macos-13]
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository code
         uses: actions/checkout@v4
-        # Use this if ORB-SLAM3 engine is a git submodule
-        with:
-          submodules: "recursive"
 
-      # --- Install OS-specific C++ dependencies ---
-      - name: Install C++ Dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: brew install opencv eigen pangolin cmake
-
-      - name: Install C++ Dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: choco install -y opencv eigen pangolin cmake
+      - name: Install Base C++ Dependencies (Non-Pangolin)
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            # We will install Pangolin's dependencies inside the cibuildwheel script
+            echo "Skipping host dependency installation for Linux"
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew install opencv eigen cmake
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            choco install -y opencv eigen cmake git
+          fi
+        shell: bash
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12" # A representative version to run cibuildwheel
+          python-version: "3.12"
 
-      - name: Install cibuildwheel and build dependencies
-        run: pip install cibuildwheel==3.0.* numpy
+      - name: Install build tools
+        run: pip install cibuildwheel==3.0.*
 
-      - name: Build wheels
+      - name: Build wheels with cibuildwheel
         run: cibuildwheel --output-dir wheelhouse
         env:
-          # --- THIS IS THE CRITICAL FIX FOR LINUX ---
-          # It runs a multi-line script to install system libs and build Pangolin from source.
+          # --- UNIFIED BUILD-FROM-SOURCE STRATEGY ---
           CIBW_BEFORE_ALL_LINUX: |
-            # Step 1: Install base dependencies using yum
             yum install -y epel-release
             yum install -y eigen3-devel opencv-devel boost-devel octomap-devel openssl-devel cmake git
-
-            # Step 2: Build Pangolin from source
             cd /tmp
-            git clone https://github.com/stevenlovegrove/Pangolin.git
+            git clone --depth 1 https://github.com/stevenlovegrove/Pangolin.git
             cd Pangolin
-            # Run Pangolin's own script to install its build dependencies
-            ./scripts/install_prerequisites.sh recommended
-            # Configure, build, and install Pangolin to the system
-            cmake -B build
+            cmake -B build -DBUILD_PANGOLIN_VIEWER=OFF
             cmake --build build -j$(nproc)
             cmake --install build
-            # ldconfig # ldconfig might not be available/needed in minimal containers
+
+          CIBW_BEFORE_ALL_MACOS: |
+            # Install Pangolin's own prerequisites using brew
+            brew install glew
+            # Now build Pangolin from source
+            cd /tmp
+            git clone --depth 1 https://github.com/stevenlovegrove/Pangolin.git
+            cd Pangolin
+            cmake -B build -DBUILD_PANGOLIN_VIEWER=OFF
+            cmake --build build -j$(nproc)
+            cmake --install build
+
+          CIBW_BEFORE_ALL_WINDOWS: |
+            # On Windows, we build and install to a temporary directory,
+            # then add that directory to the path for the main build.
+            git clone --depth 1 https://github.com/stevenlovegrove/Pangolin.git C:/pangolin_src
+            cd C:/pangolin_src
+            cmake -B build -G "Visual Studio 17 2022" -DBUILD_PANGOLIN_VIEWER=OFF -DCMAKE_INSTALL_PREFIX="C:/pangolin_install"
+            cmake --build build --config Release -j$(nproc)
+            cmake --install build --config Release
+            # Add the installed location to CMAKE_PREFIX_PATH so orbslam3's CMake can find it.
+            echo "CMAKE_PREFIX_PATH=C:/pangolin_install" >> $GITHUB_ENV
 
           CIBW_BEFORE_BUILD: "pip install numpy"
           CIBW_SKIP: "cp36-* cp37-* pp*"
           CIBW_ARCHS_MACOS: "x86_64"
 
-      - name: Upload artifacts
+      - name: Upload built wheels as an artifact
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
+  # This job for Apple Silicon also needs to build Pangolin from source
   build_macos_arm64:
     name: Build wheels on macOS (Apple Silicon)
     runs-on: macos-14
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v4
-
-      - name: Install C++ Dependencies (macOS)
-        run: brew install opencv eigen pangolin cmake
-
+      - name: Install Base C++ Dependencies
+        run: brew install opencv eigen cmake
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-
+          python-version: "3.12"
       - name: Install build tools
-        run: pip install cibuildwheel==2.19.*
-
+        run: pip install cibuildwheel==3.0.*
       - name: Build wheels with cibuildwheel
         run: cibuildwheel --output-dir wheelhouse
         env:
+          CIBW_BEFORE_ALL_MACOS: |
+            brew install glew
+            cd /tmp
+            git clone --depth 1 https://github.com/stevenlovegrove/Pangolin.git
+            cd Pangolin
+            cmake -B build -DBUILD_PANGOLIN_VIEWER=OFF
+            cmake --build build -j$(nproc)
+            cmake --install build
           CIBW_BEFORE_BUILD: "pip install numpy"
           CIBW_SKIP: "cp36-* cp37-* pp*"
           CIBW_ARCHS_MACOS: "arm64"
-
       - name: Upload built wheels as an artifact
         uses: actions/upload-artifact@v4
         with:
           name: wheels-macos-arm64
           path: ./wheelhouse/*.whl
 
-  # This job publishes the wheels to PyPI.
+  # ===================================================================
+  # WASM and Publish Jobs
+  # ===================================================================
+  build_wasm_wheels:
+    name: Build WASM wheels (Emscripten)
+    runs-on: ubuntu-latest
+    # This job already builds everything from source, so its logic is correct.
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: "recursive" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install build tools
+        run: pip install cibuildwheel==3.0.*
+      - name: Build WASM wheels
+        run: cibuildwheel --platform emscripten-wasm32 --output-dir wheelhouse
+        env:
+          CIBW_BEFORE_ALL: |
+            DEPS_PATH=/tmp/deps
+            mkdir -p $DEPS_PATH
+            git clone https://github.com/emscripten-core/emsdk.git
+            cd emsdk
+            ./emsdk install latest
+            ./emsdk activate latest
+            source ./emsdk_env.sh
+            cd ..
+            git clone https://gitlab.com/libeigen/eigen.git
+            cd eigen && mkdir build && cd build
+            emcmake cmake .. -DCMAKE_INSTALL_PREFIX=$DEPS_PATH
+            cmake --build . --target install
+            cd ../..
+            git clone https://github.com/opencv/opencv.git
+            cd opencv && mkdir build && cd build
+            emcmake cmake .. -DCMAKE_INSTALL_PREFIX=$DEPS_PATH -DBUILD_opencv_apps=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_SHARED_LIBS=OFF
+            emmake make -j$(nproc)
+            emmake make install
+            cd ../..
+            git clone https://github.com/stevenlovegrove/Pangolin.git
+            cd Pangolin && mkdir build && cd build
+            emcmake cmake .. -DCMAKE_INSTALL_PREFIX=$DEPS_PATH -DBUILD_PANGOLIN_VIEWER=OFF
+            emmake make -j$(nproc)
+            emmake make install
+            cd ../..
+            export CMAKE_PREFIX_PATH=$DEPS_PATH
+            export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig
+          CIBW_BEFORE_BUILD: "pip install numpy"
+          CIBW_SKIP: "cp36-* cp37-* pp*"
+      - uses: actions/upload-artifact@v4
+        with: { name: wheels-wasm, path: ./wheelhouse/*.whl }
+
   publish_wheels:
     name: Publish wheels to PyPI
-    # This job runs only when a new release is published on GitHub
     if: github.event_name == 'release' && github.event.action == 'published'
-    needs: [build_wheels, build_macos_arm64] # Wait for all build jobs to finish
+    needs: [build_wheels, build_macos_arm64, build_wasm_wheels]
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/orbslam3
-    permissions:
-      # This permission is required for trusted publishing
-      id-token: write
-
+    environment: { name: pypi, url: https://pypi.org/p/orbslam3 }
+    permissions: { id-token: write }
     steps:
-      - name: Download all wheels
-        uses: actions/download-artifact@v4
-        with:
-          # The pattern must match the upload names
-          pattern: wheels-*
-          path: dist
-          merge-multiple: true # Combine all artifacts into one directory
-
-      - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        # No password needed due to trusted publishing
+      - uses: actions/download-artifact@v4
+        with: { pattern: wheels-*, path: dist, merge-multiple: true }
+      - uses: pypa/gh-action-pypi-publish@release/v1
