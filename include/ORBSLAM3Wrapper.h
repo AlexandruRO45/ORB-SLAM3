@@ -20,6 +20,7 @@ class ORBSLAM3Python
 
     bool initialize();
     bool processMono(cv::Mat image, double timestamp);
+    // bool processMonoInertial(cv::Mat image, double timestamp, const std::vector<py::tuple> &imu_data);
     bool processStereo(cv::Mat leftImage, cv::Mat rightImage, double timestamp);
     bool processRGBD(cv::Mat image, cv::Mat depthImage, double timestamp);
     void reset();

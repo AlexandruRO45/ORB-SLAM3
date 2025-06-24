@@ -7,6 +7,7 @@
 #include <ORB_SLAM3_engine/include/Converter.h>
 #include <ORB_SLAM3_engine/include/Tracking.h>
 #include <ORB_SLAM3_engine/include/MapPoint.h>
+// #include <ORB_SLAM3_engine/include/ImuTypes.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -65,6 +66,41 @@ bool ORBSLAM3Python::processMono(cv::Mat image, double timestamp)
         return false;
     }
 }
+
+// bool ORBSLAM3Python::processMonoInertial(cv::Mat image, double timestamp, const std::vector<py::tuple> &imu_data)
+// {
+//     if (!system)
+//     {
+//         return false;
+//     }
+//     if (!image.data)
+//     {
+//         return false;
+//     }
+
+//     // 1. Create a C++ vector of IMU points
+//     std::vector<ORB_SLAM3::IMU::Point> vImu;
+//     vImu.reserve(imu_data.size());
+
+//     // 2. Loop through the Python data and convert it to the C++ struct
+//     for (const auto &imu_tuple : imu_data)
+//     {
+//         // Extract data from the Python tuple
+//         double ax = imu_tuple[0].cast<double>();
+//         double ay = imu_tuple[1].cast<double>();
+//         double az = imu_tuple[2].cast<double>();
+//         double gx = imu_tuple[3].cast<double>();
+//         double gy = imu_tuple[4].cast<double>();
+//         double gz = imu_tuple[5].cast<double>();
+//         double ts = imu_tuple[6].cast<double>();
+
+//         vImu.emplace_back(ax, ay, az, gx, gy, gz, ts);
+//     }
+
+//     // 3. Call the correct TrackMonocular function that accepts IMU data
+//     pose = system->TrackMonocular(image, timestamp, vImu);
+//     return !system->isLost();
+// }
 
 bool ORBSLAM3Python::processStereo(cv::Mat leftImage, cv::Mat rightImage, double timestamp)
 {
@@ -154,6 +190,7 @@ PYBIND11_MODULE(_core, m)
         .def(py::init<std::string, std::string, ORB_SLAM3::System::eSensor>(), py::arg("vocab_file"), py::arg("settings_file"), py::arg("sensor_type"))
         .def("initialize", &ORBSLAM3Python::initialize)
         .def("process_image_mono", &ORBSLAM3Python::processMono, py::arg("image"), py::arg("time_stamp"))
+        // .def("process_image_mono_inertial", &ORBSLAM3Python::processMonoInertial, py::arg("image"), py::arg("time_stamp"), py::arg("imu_data"))
         .def("process_image_stereo", &ORBSLAM3Python::processStereo, py::arg("left_image"), py::arg("right_image"), py::arg("time_stamp"))
         .def("process_image_rgbd", &ORBSLAM3Python::processRGBD, py::arg("image"), py::arg("depth"), py::arg("time_stamp"))
         .def("shutdown", &ORBSLAM3Python::shutdown)

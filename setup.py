@@ -52,12 +52,12 @@ class CMakeBuild(build_ext):
         subprocess.check_call(["cmake", str(ext.sourcedir)] + cmake_args, cwd=build_temp)
 
         # Allow user to override parallel jobs 
-        # TODO: Known bug if there are more than 4 jobs, CMake will fail to build
-        build_jobs = str(4) # Default to 4 jobs for now, can be overridden by user
+        # TODO: Known bug if there are more than 8 jobs, CMake will fail to build
+        build_jobs = str(8) # Default to 8 jobs for now, can be overridden by user
         # Uncomment the following lines to allow user to set this via environment variable
         # build_jobs = os.environ.get("CMAKE_BUILD_PARALLEL_LEVEL")
         # if not build_jobs:
-        #     build_jobs = str(os.cpu_count() or 4) # Default to number of CPUs
+        #     build_jobs = str(os.cpu_count() or 8) # Default to number of CPUs
         
         print(f"Building project with {build_jobs} parallel jobs")
         subprocess.check_call(
@@ -67,7 +67,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="orbslam3",
-    version="1.2.9",
+    version="1.3.0",
     description='SLAM and Global VO module for VNAV project',
     long_description="This package provides Python bindings for the ORB-SLAM3 visual SLAM system, allowing users to integrate SLAM functionalities into Python applications.",
     packages=find_packages(),
