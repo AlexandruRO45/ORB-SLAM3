@@ -1,0 +1,102 @@
+name: Build and Publish Linux Wheels to PyPI
+
+# This workflow runs on pushes/PRs to validate the build,
+# but the crucial deployment step only runs on a new release.
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  release:
+    types: [published] # This trigger is for the PyPI deployment job
+  workflow_dispatch:
+
+jobs:
+  # This job builds the manylinux wheels.
+  build_linux_wheels:
+    name: Build manylinux Wheels on Ubuntu 24.04
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Step 1: Check out the repository code
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive" # Fetch the ORB_SLAM3_engine submodule
+
+      # Step 2: Set up Python. cibuildwheel will use this to run.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Step 3: Install the build tool
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel==3.0.*
+
+      # Step 4: Build the wheels
+      # cibuildwheel handles creating isolated Docker environments for each Python version.
+      - name: Build wheels with cibuildwheel
+        run: cibuildwheel --output-dir wheelhouse
+        env:
+          # This script runs ONCE inside the manylinux container before any builds start.
+          # It installs all C++ system dependencies, including building Pangolin from source.
+          CIBW_BEFORE_ALL_LINUX: |
+            # Install base dependencies from yum repositories
+            yum install -y epel-release
+            yum install -y eigen3-devel opencv-devel boost-devel octomap-devel openssl-devel cmake git libepoxy-devel
+
+            # Build Pangolin from source inside a temporary directory
+            cd /tmp
+            git clone --depth 1 https://github.com/stevenlovegrove/Pangolin.git
+            cd Pangolin
+            cmake -B build -DBUILD_PANGOLIN_VIEWER=OFF
+            cmake --build build -j$(nproc)
+            cmake --install build
+
+          # This command runs before building EACH wheel variant.
+          # It ensures numpy is available for your setup.py script.
+          CIBW_BEFORE_BUILD: "pip install numpy"
+
+          # Optional: Skip building for older Python versions to speed up the run.
+          CIBW_SKIP: "cp36-* cp37-* pp*"
+
+      # Step 5: Upload the built wheels as an artifact.
+      # The publish job will download this artifact.
+      - name: Upload wheels artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-wheels
+          path: ./wheelhouse/*.whl
+
+  # This job publishes the wheels to PyPI.
+  publish_to_pypi:
+    name: Publish wheels to PyPI
+    # This 'if' condition is your safety gate.
+    # It ensures this job ONLY runs when you create a new release on the GitHub UI.
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    # It waits for the build job to succeed before running.
+    needs: [build_linux_wheels]
+
+    runs-on: ubuntu-latest
+
+    # Configure for PyPI's Trusted Publishing (OIDC)
+    environment:
+      name: pypi
+      url: https://pypi.org/p/orbslam3
+    permissions:
+      id-token: write # Required for trusted publishing
+
+    steps:
+      # Step 1: Download the wheel artifact from the build job.
+      - name: Download wheels artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-wheels
+          path: dist # The 'pypi-publish' action looks in the 'dist' directory
+
+      # Step 2: Publish the package to PyPI.
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No username or password needed due to trusted publishing.
