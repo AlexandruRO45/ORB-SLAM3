@@ -1,6 +1,43 @@
-build/
+# Python
+__pycache__/
+.conda/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-wheel-metadata/
+develop-eggs/
+.eggs/
+sdist/
+wheelhouse/
 *.egg-info/
+*.egg
+
+# Build artifacts
+build/
+dist/
+
+# C/C++ artifacts
+*.o
+*.so
+*.a
+*.lo
+*.la
+*.dll
+*.lib
+*.exp
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+install_manifest.txt
+
+# IDE files
+.vscode/
+.idea/
 outputs/
 examples/
-dist/
-__pycache__

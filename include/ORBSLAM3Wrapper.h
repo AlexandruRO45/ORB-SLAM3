@@ -13,7 +13,7 @@ namespace py = pybind11;
 
 class ORBSLAM3Python
 {
-public:
+  public:
     ORBSLAM3Python(std::string vocabFile, std::string settingsFile,
                    ORB_SLAM3::System::eSensor sensorMode = ORB_SLAM3::System::eSensor::RGBD);
     ~ORBSLAM3Python();
@@ -32,7 +32,7 @@ public:
     }
     py::array_t<short> get2DOccMap() const;
 
-private:
+  private:
     std::string vocabluaryFile;
     std::string settingsFile;
     ORB_SLAM3::System::eSensor sensorMode;

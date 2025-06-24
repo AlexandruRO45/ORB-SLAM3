@@ -6,3 +6,36 @@ requires = [
     "numpy"
 ]
 build-backend = "setuptools.build_meta"
+
+# PEP 621 Project metadata
+[project]
+name = "orbslam3"
+dynamic = ["version", "readme"] # Indicates version/readme are loaded from other files
+description = "SLAM and Global VO module for VNAV project"
+maintainers = [
+    { name = "Alex S.", email = "savaalexandru562@gmail.com" }
+]
+license = { file = "LICENSE" } # Points to your license file
+requires-python = ">=3.8"
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: C++',
+    # ... other classifiers
+]
+dependencies = [
+    "numpy"
+]
+
+[project.optional-dependencies]
+test = ["pytest>=6.0"]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/AlexandruRO45/ORB-SLAM3/issues"
+"Source" = "https://github.com/AlexandruRO45/ORB-SLAM3/"

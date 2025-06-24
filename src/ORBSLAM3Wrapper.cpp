@@ -130,7 +130,7 @@ std::vector<Eigen::Matrix4f> ORBSLAM3Python::getTrajectory() const
     return system->GetCameraTrajectory();
 }
 
-PYBIND11_MODULE(orbslam3, m)
+PYBIND11_MODULE(_core, m)
 {
     NDArrayConverter::init_numpy();
     py::enum_<ORB_SLAM3::Tracking::eTrackingState>(m, "TrackingState")
