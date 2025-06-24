@@ -3,9 +3,9 @@ name: Build and Test
 # Controls when the workflow will run
 on:
   push:
-    branches: ["main"] # Runs on pushes to the main branch
+    branches: ["main", "master", "exp/setup"] # Runs on pushes to the main branch
   pull_request:
-    branches: ["main"] # Runs on pull requests targeting the main branch
+    branches: ["main", "master", "exp/setup"] # Runs on pull requests targeting the main branch
 
 jobs:
   build:

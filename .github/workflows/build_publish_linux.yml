@@ -4,9 +4,9 @@ name: Build and Publish Linux Wheels to PyPI
 # but the crucial deployment step only runs on a new release.
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "master", "exp/setup"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "master", "exp/setup"]
   release:
     types: [published] # This trigger is for the PyPI deployment job
   workflow_dispatch:
