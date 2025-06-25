@@ -1,9 +1,11 @@
-#ifndef ORB_SLAM3_PYTHON_H
-#define ORB_SLAM3_PYTHON_H
+#ifndef ORBSLAM3_WRAPPER_H
+#define ORBSLAM3_WRAPPER_H
 
 #include <memory>
-#include <System.h>
-#include <Tracking.h>
+#include <string>
+#include <vector>
+#include <ORB_SLAM3_engine/include/System.h>
+#include <ORB_SLAM3_engine/include/Tracking.h>
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
 #include <pybind11/numpy.h>
@@ -15,12 +17,13 @@ class ORBSLAM3Python
 {
   public:
     ORBSLAM3Python(std::string vocabFile, std::string settingsFile,
-                   ORB_SLAM3::System::eSensor sensorMode = ORB_SLAM3::System::eSensor::RGBD);
+                   ORB_SLAM3::System::eSensor sensorMode);
     ~ORBSLAM3Python();
 
     bool initialize();
+    bool isRunning();
     bool processMono(cv::Mat image, double timestamp);
-    // bool processMonoInertial(cv::Mat image, double timestamp, const std::vector<py::tuple> &imu_data);
+    bool processMonoInertial(cv::Mat image, double timestamp, std::vector<ORB_SLAM3::IMU::Point> imuMeas);
     bool processStereo(cv::Mat leftImage, cv::Mat rightImage, double timestamp);
     bool processRGBD(cv::Mat image, cv::Mat depthImage, double timestamp);
     void reset();
@@ -28,6 +31,10 @@ class ORBSLAM3Python
     bool isRunning();
     void setUseViewer(bool useViewer);
     std::vector<Eigen::Matrix4f> getTrajectory() const;
+    int getTrackingState() const;
+    bool isLost() const;
+    bool wasMapReset();
+    int getResetCount() const;
     auto get_pose(){
       return pose.matrix();
     }
@@ -39,8 +46,13 @@ class ORBSLAM3Python
     ORB_SLAM3::System::eSensor sensorMode;
     std::shared_ptr<ORB_SLAM3::System> system;
     bool bUseViewer;
+    bool mbMapResetOccurred;
+    int mnResetCounter;
+    bool mbFirstFrame;
+    ORB_SLAM3::Tracking::eTrackingState mLastTrackingState; // Changed from int to proper enum type
+    std::vector<float> mvLastPosition;
     bool bUseRGB;
     Sophus::SE3f pose;
 };
 
-#endif // ORB_SLAM3_PYTHON_H
+#endif // ORBSLAM3_WRAPPER_H

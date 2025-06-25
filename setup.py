@@ -24,7 +24,7 @@ class CMakeBuild(build_ext):
 
         # Extract vocabulary file
         vocab_src = Path(ext.sourcedir) / "third_party" / "ORB_SLAM3_engine" / "Vocabulary" / "ORBvoc.txt.tar.gz"
-        vocab_dst_dir = vocab_src.parent
+        vocab_dst_dir = Path(ext.sourcedir) / "tests" / "configs" # Instead of same parent dir vocab_src.parent we move it to test/configs
         if vocab_src.exists():
             print(f"Extracting {vocab_src} to {vocab_dst_dir}")
             with tarfile.open(vocab_src, "r:gz") as tar:
@@ -38,7 +38,7 @@ class CMakeBuild(build_ext):
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
             f"-DCMAKE_CXX_FLAGS=-I{np.get_include()}",
-            "-Wno-dev" # Suppress CMake developer warnings
+            f"-Wno-dev -Wno-deprecated-declarations -Wno-maybe-uninitialized" # Suppress CMake developer warnings
         ]
 
         # Allow user to pass extra CMake args
