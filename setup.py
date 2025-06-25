@@ -20,6 +20,12 @@ class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension):
         import numpy as np # Import numpy here, as it's a build dependency
 
+        """ The destination directory for the compiled extension.
+                self.get_ext_fullpath(ext.name) will return something like:
+                    build/lib.linux-x86_64-3.9/orbslam3/_core.so
+                .parent.resolve() gives us the final package directory:
+                    build/lib.linux-x86_64-3.9/orbslam3/ 
+        """
         extdir = Path(self.get_ext_fullpath(ext.name)).parent.resolve()
 
         # Extract vocabulary file
@@ -67,13 +73,13 @@ class CMakeBuild(build_ext):
 
 setup(
     name="orbslam3",
-    version="1.3.0",
+    version="1.3.9",
     description='SLAM and Global VO module for VNAV project',
     long_description="This package provides Python bindings for the ORB-SLAM3 visual SLAM system, allowing users to integrate SLAM functionalities into Python applications.",
-    packages=find_packages(),
-    package_dir={'': '.'},
-    install_requires=["numpy"],
-    ext_modules=[CMakeExtension("orbslam3._core")], 
+    packages=find_packages(where='src'),
+    package_dir={'': 'src'},
+    install_requires=["numpy","opencv-python"],
+    ext_modules=[CMakeExtension("orbslam3._core", sourcedir=".")], 
     cmdclass={"build_ext": CMakeBuild},
     package_data={
         'orbslam3': ['*.so', '*.pyd', '*.dylib'], 

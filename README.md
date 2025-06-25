@@ -1,7 +1,7 @@
 # Python Bindings for ORB-SLAM3
 
 [![PyPI version](https://img.shields.io/pypi/v/orbslam3.svg)](https://pypi.org/project/orbslam3/)
-[![Build Status](https://github.com/alexandrusava/ORB-SLAM3/actions/workflows/build_test.yml/badge.svg)](https://github.com/alexandrusava/ORB-SLAM3/actions/workflows/build_test.yml)
+[![Build Status](https://github.com/AlexandruRO45/ORB-SLAM3/actions/workflows/build_test.yml/badge.svg)](https://github.com/alexandrusava/ORB-SLAM3/actions/workflows/build_test.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 This package provides a more up-to-date, pre-compiled Python bindings from the original repo **ORB-SLAM3-PYTHON** that has been inactive for years.

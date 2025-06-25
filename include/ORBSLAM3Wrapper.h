@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <Eigen/Core>
 #include <ORB_SLAM3_engine/include/System.h>
 #include <ORB_SLAM3_engine/include/Tracking.h>
 #include <pybind11/stl.h>
@@ -28,7 +29,6 @@ class ORBSLAM3Python
     bool processRGBD(cv::Mat image, cv::Mat depthImage, double timestamp);
     void reset();
     void shutdown();
-    bool isRunning();
     void setUseViewer(bool useViewer);
     std::vector<Eigen::Matrix4f> getTrajectory() const;
     int getTrackingState() const;

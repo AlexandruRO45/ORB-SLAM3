@@ -51,7 +51,7 @@ bool ORBSLAM3Python::initialize()
     mbMapResetOccurred = false;
     mnResetCounter = 0;
     mLastTrackingState = ORB_SLAM3::Tracking::SYSTEM_NOT_READY;
-    if (!system->isInitialized())
+    if (!system)
     {
         std::cerr << "Failed to initialize ORB-SLAM3 system!" << std::endl;
         return false;
@@ -101,6 +101,7 @@ bool ORBSLAM3Python::processMono(cv::Mat image, double timestamp)
     }
     else
     {
+        std::cout << "processMono - Invalid image data!" << std::endl;
         return false;
     }
 }
@@ -166,7 +167,7 @@ bool ORBSLAM3Python::processStereo(cv::Mat leftImage, cv::Mat rightImage, double
 {
     if (!system)
     {
-        std::cout << "you must call initialize() first!" << std::endl;
+        std::cout << "processStereo - System not initialized!" << std::endl;
         return false;
     }
     if (leftImage.data && rightImage.data)
@@ -198,7 +199,7 @@ bool ORBSLAM3Python::processRGBD(cv::Mat image, cv::Mat depthImage, double times
 {
     if (!system)
     {
-        std::cout << "you must call initialize() first!" << std::endl;
+        std::cout << "processRGBD - System not initialized!" << std::endl;
         return false;
     }
     if (image.data && depthImage.data)
@@ -362,11 +363,6 @@ int ORBSLAM3Python::getResetCount() const
     return mnResetCounter;
 }
 
-// Method to get the current pose as an Eigen matrix
-Eigen::Matrix4f ORBSLAM3Python::get_pose() const
-{
-    return pose.matrix();
-}
 
 PYBIND11_MODULE(_core, m)
 {
