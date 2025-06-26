@@ -12,7 +12,7 @@ try:
     # From the file `_core.so`, import the bound C++ classes and enums.
     # We alias the lowercase "system" class to a more Pythonic "System"
     from ._core import system as System
-    from ._core import Sensor, TrackingState
+    from ._core import IMU, Sensor, TrackingState
 
 except ImportError as e:
     # This provides a much better error message if the C++ part failed.
@@ -27,6 +27,7 @@ except ImportError as e:
 __all__ = [
     "__version__",
     "System",         # The main class for interacting with SLAM
+    "IMU",            # The IMU class for handling inertial measurements
     "Sensor",         # The sensor enum
     "TrackingState",  # The tracking state enum
 ]
