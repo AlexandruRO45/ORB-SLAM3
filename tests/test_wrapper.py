@@ -8,7 +8,7 @@ import orbslam3
 # --- Configuration ---
 VOCAB_FILE = "tests/configs/ORBvoc.txt"
 CONFIGS = {
-    "mono": "tests/configs/monocular.yaml",
+    "mono": "tests/configs/mono.yaml",
     "mono_inertial": "tests/configs/mono_inertial.yaml",
     "stereo": "tests/configs/stereo.yaml",
     "stereo_inertial": "tests/configs/stereo_inertial.yaml",
@@ -46,6 +46,13 @@ def create_dummy_image(height=480, width=640, channels=1):
         return np.random.randint(0, 256, (height, width), dtype=np.uint8)
     else:
         return np.random.randint(0, 256, (height, width, channels), dtype=np.uint8)
+    
+def create_dummy_depth_image(height=480, width=640, channels=1):
+    """Creates a dummy depth image (16-bit)."""
+    if channels == 1:
+        return (np.random.rand(height, width) * 1000).astype(np.uint16)
+    else:
+        return (np.random.rand(height, width, channels) * 1000).astype(np.uint16)
 
 def create_dummy_imu_data(timestamp):
     """Creates a list of dummy IMU measurements."""
@@ -61,90 +68,6 @@ def create_dummy_imu_data(timestamp):
             )
         )
     return imu_points
-
-
-
-# --- Pytest Fixtures ---
-# MONO SLAM SYSTEM FIXTURES
-@pytest.fixture(scope="function")
-def mono_system():
-    """Fixture to initialize and shut down a Monocular SLAM system."""
-    print("\nSetting up Monocular SLAM system...")
-    slam = orbslam3.System(VOCAB_FILE, CONFIGS["mono"], orbslam3.Sensor.MONOCULAR)
-    
-    assert slam.initialize() is True
-    yield slam
-    
-    print("\nShutting down Monocular SLAM system.")
-    slam.shutdown()
-    assert slam.is_running() is False
-
-@pytest.fixture(scope="function")
-def mono_inertial_system():
-    """Fixture to initialize and shut down a Monocular-Inertial SLAM system."""
-    print("\nSetting up Monocular-Inertial SLAM system...")
-    slam = orbslam3.System(VOCAB_FILE, CONFIGS["mono_inertial"], orbslam3.Sensor.IMU_MONOCULAR)
-    
-    assert slam.initialize() is True
-    yield slam
-    
-    print("\nShutting down Monocular-Inertial SLAM system.")
-    slam.shutdown()
-    assert slam.is_running() is False
-
-# STEREO SLAM SYSTEM FIXTURES
-@pytest.fixture(scope="function")
-def stereo_system():
-    """Fixture to initialize and shut down a Monocular SLAM system."""
-    print("\nSetting up Monocular SLAM system...")
-    slam = orbslam3.System(VOCAB_FILE, CONFIGS["stereo"], orbslam3.Sensor.STEREO)
-    
-    assert slam.initialize() is True
-    yield slam
-    
-    print("\nShutting down Monocular SLAM system.")
-    slam.shutdown()
-    assert slam.is_running() is False
-
-@pytest.fixture(scope="function")
-def stereo_inertial_system():
-    """Fixture to initialize and shut down a Monocular-Inertial SLAM system."""
-    print("\nSetting up Monocular-Inertial SLAM system...")
-    slam = orbslam3.System(VOCAB_FILE, CONFIGS["stereo_inertial"], orbslam3.Sensor.IMU_STEREO)
-    
-    assert slam.initialize() is True
-    yield slam
-    
-    print("\nShutting down Monocular-Inertial SLAM system.")
-    slam.shutdown()
-    assert slam.is_running() is False
-
-# RGB-D SLAM SYSTEM FIXTURES
-@pytest.fixture(scope="function")
-def stereo_system():
-    """Fixture to initialize and shut down a Monocular SLAM system."""
-    print("\nSetting up Monocular SLAM system...")
-    slam = orbslam3.System(VOCAB_FILE, CONFIGS["rgbd"], orbslam3.Sensor.RGBD)
-    
-    assert slam.initialize() is True
-    yield slam
-    
-    print("\nShutting down Monocular SLAM system.")
-    slam.shutdown()
-    assert slam.is_running() is False
-
-@pytest.fixture(scope="function")
-def stereo_inertial_system():
-    """Fixture to initialize and shut down a Monocular-Inertial SLAM system."""
-    print("\nSetting up Monocular-Inertial SLAM system...")
-    slam = orbslam3.System(VOCAB_FILE, CONFIGS["rgbd_inertial"], orbslam3.Sensor.IMU_RGBD)
-    
-    assert slam.initialize() is True
-    yield slam
-    
-    print("\nShutting down Monocular-Inertial SLAM system.")
-    slam.shutdown()
-    assert slam.is_running() is False
 
 
 
@@ -240,54 +163,165 @@ class TestSystemControl:
         assert True 
 
 
-
-@pytest.mark.parametrize("sensor_details", [
-    {"name": "mono", "sensor_enum": orbslam3.Sensor.MONOCULAR, "config": CONFIGS["mono"]},
-    {"name": "stereo", "sensor_enum": orbslam3.Sensor.STEREO, "config": CONFIGS["stereo"]},
-    {"name": "rgbd", "sensor_enum": orbslam3.Sensor.RGBD, "config": CONFIGS["rgbd"]},
-    {"name": "mono_inertial", "sensor_enum": orbslam3.Sensor.IMU_MONOCULAR, "config": CONFIGS["mono_inertial"]},
-    # TODO: Uncomment when stereo_inertial and rgbd_inertial are implemented
-    # {"name": "stereo_inertial", "sensor_enum": orbslam3.Sensor.IMU_STEREO, "config": CONFIGS["stereo_inertial"]},
-    # {"name": "rgbd_inertial", "sensor_enum": orbslam3.Sensor.IMU_RGBD, "config": CONFIGS["rgbd_inertial"]}
+# TODO: Uncomment when stereo_inertial and rgbd_inertial are implemented
+@pytest.fixture(scope="function", params=[
+    pytest.param(("mono", orbslam3.Sensor.MONOCULAR), id="MONOCULAR"),
+    pytest.param(("mono_inertial", orbslam3.Sensor.IMU_MONOCULAR), id="MONO_INERTIAL"),
+    pytest.param(("stereo", orbslam3.Sensor.STEREO), id="STEREO"),
+    # pytest.param(("stereo_inertial", orbslam3.Sensor.IMU_STEREO), id="STEREO_INERTIAL"),
+    pytest.param(("rgbd", orbslam3.Sensor.RGBD), id="RGBD"),
+    # pytest.param(("rgbd_inertial", orbslam3.Sensor.IMU_RGBD), id="RGBD_INERTIAL"),
 ])
-class TestProcessingModes:
-    """Contains smoke tests for each sensor processing mode, using helper functions."""
+def slam_system_and_type(request):
+    """
+    A single, parameterized fixture that initializes and shuts down any
+    type of SLAM system based on the provided parameters.
+    """
+    config_key, sensor_type = request.param
+    system_name = request.node.callspec.id  # Gets the 'id' from pytest.param
 
-    def test_process_frame(self, sensor_details):
-        """A generic test to ensure each processing mode can be called without crashing."""
-        slam = orbslam3.System(VOCAB_FILE, sensor_details["config"], sensor_details["sensor_enum"])
-        slam.initialize()
+    print(f"\nSetting up {system_name} SLAM system...")
+    slam = orbslam3.System(VOCAB_FILE, CONFIGS[config_key], sensor_type)
+    
+    assert slam.initialize() is True, f"Failed to initialize {system_name} system."
+    yield slam  
+    
+    print(f"\nShutting down {system_name} SLAM system.")
+    slam.shutdown()
+    assert slam.is_running() is False, f"Failed to shut down {system_name} system."
+
+
+
+class TestAllSystemModes:
+    """
+    Tests all sensor modes by adapting the test logic based on the
+    specific system type provided by the parameterized fixture.
+    """
+    
+    def test_process_first_frame_for_each_mode(self, slam_system_and_type):
+        """
+        This single test method is executed for each system type. It correctly
+        calls the appropriate 'process_image_*' method with the right data.
+        """
+        # 1. Arrange: Unpack the tuple from the fixture
+        slam_system, system_type = slam_system_and_type
+        timestamp = 1000.0
         
+        print(f"Running test on a '{system_type}' system.")
+        
+        # Assert initial state (from fixture)
+        assert slam_system.is_running() is True
+        assert slam_system.get_tracking_state() in [
+            orbslam3.TrackingState.SYSTEM_NOT_READY,
+            orbslam3.TrackingState.NO_IMAGES_YET
+        ]
+
+        # 2. Act: Call the correct processing method based on the system type
+        if system_type == "mono":
+            slam_system.process_image_mono(create_dummy_image(), timestamp)
+        
+        elif system_type == "stereo":
+            slam_system.process_image_stereo(create_dummy_image(), create_dummy_image(), timestamp)
+
+        elif system_type == "rgbd":
+            slam_system.process_image_rgbd(create_dummy_image(), create_dummy_depth_image(), timestamp)
+
+        elif system_type == "mono_inertial":
+            slam_system.process_image_mono_inertial(create_dummy_image(), timestamp, create_dummy_imu_data(timestamp))
+        
+        else:
+            pytest.fail(f"Test case for system type '{system_type}' is not implemented.")
+
+        # 3. Assert: Check a common post-condition
+        assert slam_system.get_pose().shape == (4, 4)
+
+
+    def test_reset_functionality_for_each_mode(self, slam_system_and_type):
+        """
+        Tests the reset functionality for each system type.
+        """
+        # 1. Arrange: Unpack the fixture and set up data
+        slam_system, system_type = slam_system_and_type
         timestamp = 2000.0
-        image_left = create_dummy_image()
+        
+        print(f"Testing reset on a '{system_type}' system.")
+        
+        # 2. Act (Part 1): Process a frame to give the system a state to reset.
+        # This re-uses the same logic as the first test to ensure it works.
+        if system_type == "mono":
+            slam_system.process_image_mono(create_dummy_image(), timestamp)
+        elif system_type == "stereo":
+            slam_system.process_image_stereo(create_dummy_image(), create_dummy_image(), timestamp)
+        elif system_type == "rgbd":
+            slam_system.process_image_rgbd(create_dummy_image(), create_dummy_depth_image(), timestamp)
+        elif system_type == "mono_inertial":
+            slam_system.process_image_mono_inertial(create_dummy_image(), timestamp, create_dummy_imu_data(timestamp))
+        
+        initial_reset_count = slam_system.get_reset_count()
 
-        try:
-            if sensor_details["name"] == "mono":
-                slam.process_image_mono(image_left, timestamp)
-            elif sensor_details["name"] == "stereo":
-                image_right = create_dummy_image() 
-                slam.process_image_stereo(image_left, image_right, timestamp)
-            elif sensor_details["name"] == "rgbd":
-                depth_img = create_dummy_image().astype(np.uint16) * 10 
-                slam.process_image_rgbd(image_left, depth_img, timestamp)
-            elif sensor_details["name"] == "mono_inertial":
-                imu_data = create_dummy_imu_data(timestamp)
-                slam.process_image_mono_inertial(image_left, timestamp, imu_data)
-            # TODO: Uncomment when stereo_inertial and rgbd_inertial are implemented
-            # elif sensor_details["name"] == "stereo_inertial":
-            #     image_right = create_dummy_image()
-            #     imu_data = create_dummy_imu_data(timestamp)
-            #     slam.process_image_stereo_inertial(image_left, image_right, timestamp, imu_data)
-            # elif sensor_details["name"] == "rgbd_inertial":
-            #     depth_img = create_dummy_image().astype(np.uint16) * 10
-            #     imu_data = create_dummy_imu_data(timestamp)
-            #     slam.process_image_rgbd_inertial(image_left, depth_img, timestamp, imu_data)
+        # 3. Act (Part 2): Call the reset method
+        slam_system.reset()
+
+        # 4. Assert: Verify the results of the reset
+        assert slam_system.get_reset_count() > initial_reset_count
+        assert slam_system.was_map_reset() is True, "was_map_reset() should be true immediately after reset."
+        assert slam_system.was_map_reset() is False, "was_map_reset() should be false after being checked once."
+        # After a reset, the tracking state should revert to a non-OK state.
+        assert slam_system.get_tracking_state() in [
+            orbslam3.TrackingState.NOT_INITIALIZED,
+            orbslam3.TrackingState.NO_IMAGES_YET
+        ]
+
+
+
+# --- DEPRECATED: Generic Processing Mode Tests ---
+# @pytest.mark.parametrize("sensor_details", [
+#     {"name": "mono", "sensor_enum": orbslam3.Sensor.MONOCULAR, "config": CONFIGS["mono"]},
+#     {"name": "stereo", "sensor_enum": orbslam3.Sensor.STEREO, "config": CONFIGS["stereo"]},
+#     {"name": "rgbd", "sensor_enum": orbslam3.Sensor.RGBD, "config": CONFIGS["rgbd"]},
+#     {"name": "mono_inertial", "sensor_enum": orbslam3.Sensor.IMU_MONOCULAR, "config": CONFIGS["mono_inertial"]},
+#     # TODO: Uncomment when stereo_inertial and rgbd_inertial are implemented
+#     # {"name": "stereo_inertial", "sensor_enum": orbslam3.Sensor.IMU_STEREO, "config": CONFIGS["stereo_inertial"]},
+#     # {"name": "rgbd_inertial", "sensor_enum": orbslam3.Sensor.IMU_RGBD, "config": CONFIGS["rgbd_inertial"]}
+# ])
+# class TestProcessingModes:
+#     """Contains smoke tests for each sensor processing mode, using helper functions."""
+
+#     def test_process_frame(self, sensor_details):
+#         """A generic test to ensure each processing mode can be called without crashing."""
+#         slam = orbslam3.System(VOCAB_FILE, sensor_details["config"], sensor_details["sensor_enum"])
+#         slam.initialize()
+        
+#         timestamp = 2000.0
+#         image_left = create_dummy_image()
+
+#         try:
+#             if sensor_details["name"] == "mono":
+#                 slam.process_image_mono(image_left, timestamp)
+#             elif sensor_details["name"] == "stereo":
+#                 image_right = create_dummy_image() 
+#                 slam.process_image_stereo(image_left, image_right, timestamp)
+#             elif sensor_details["name"] == "rgbd":
+#                 depth_img = create_dummy_image().astype(np.uint16) * 10 
+#                 slam.process_image_rgbd(image_left, depth_img, timestamp)
+#             elif sensor_details["name"] == "mono_inertial":
+#                 imu_data = create_dummy_imu_data(timestamp)
+#                 slam.process_image_mono_inertial(image_left, timestamp, imu_data)
+#             # TODO: Uncomment when stereo_inertial and rgbd_inertial are implemented
+#             # elif sensor_details["name"] == "stereo_inertial":
+#             #     image_right = create_dummy_image()
+#             #     imu_data = create_dummy_imu_data(timestamp)
+#             #     slam.process_image_stereo_inertial(image_left, image_right, timestamp, imu_data)
+#             # elif sensor_details["name"] == "rgbd_inertial":
+#             #     depth_img = create_dummy_image().astype(np.uint16) * 10
+#             #     imu_data = create_dummy_imu_data(timestamp)
+#             #     slam.process_image_rgbd_inertial(image_left, depth_img, timestamp, imu_data)
             
-            pose = slam.get_pose()
-            assert pose.shape == (4, 4)
+#             pose = slam.get_pose()
+#             assert pose.shape == (4, 4)
 
-        finally:
-            slam.shutdown()
+#         finally:
+#             slam.shutdown()
 
 class TestIMUHelpers:
     """Tests the IMU.Point data structure exposed from C++."""
@@ -299,17 +333,7 @@ class TestIMUHelpers:
         assert p.ax == 1.0
         assert p.wy == 5.0
         assert p.t == ts
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
 
 
 # # --- Placeholder tests for other sensor types ---
