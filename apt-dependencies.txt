@@ -1,17 +1,12 @@
-# Build essentials
 build-essential
 cmake
 git
 wget
-
-# Core SLAM dependencies
 libeigen3-dev 
 libopencv-dev 
 libboost-serialization-dev 
 liboctomap-dev 
 libssl-dev
 libpcl-dev
-
-# Pangolin dependencies
 libglew-dev
 libgl1-mesa-dev
