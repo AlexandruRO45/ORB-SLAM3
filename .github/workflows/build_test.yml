@@ -50,7 +50,7 @@ jobs:
       # NOTE: ORB-SLAM3 can be sensitive to the Pangolin version.
       # v0.8 is a modern, stable choice, but you might need to adjust this (e.g., to v0.6)
       # depending on the exact version of the ORB-SLAM3 engine you are using.
-      - name: "Build and Install Pangolin v0.8"
+      - name: "Build and Install Pangolin v0.9.1"
         run: |
           # Create a temporary directory for building dependencies to keep the workspace clean
           mkdir ${{ github.workspace }}/third_party_build
@@ -70,11 +70,11 @@ jobs:
             -DBUILD_PANGOLIN_FFMPEG=OFF \
             -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
             -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_FLAGS="-w"
 
           echo "Building and installing Pangolin system-wide..."
-          # 'sudo' is required to install it into /usr/local/
+          # 'sudo' to install it into /usr/local/
           sudo cmake --build build --config ${{ matrix.build_type }} --target install
 
       # 5. Install Python dependencies and trigger the C++ build for your wrapper
