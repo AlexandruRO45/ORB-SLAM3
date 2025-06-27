@@ -57,7 +57,6 @@ jobs:
 
           echo "Configuring Pangolin build..."
           cmake -B build -S . \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DBUILD_EXAMPLES=OFF \
             -DBUILD_TESTS=OFF \
             -DBUILD_PANGOLIN_FFMPEG=OFF \
@@ -73,7 +72,7 @@ jobs:
       # 5. Configure the linker path to include /usr/local/lib
       - name: "Configure Linker Path"
         run: |
-          echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/usr-local.conf
+          echo "/usr/local/lib:" | sudo tee /etc/ld.so.conf.d/usr-local.conf
           sudo ldconfig
 
       # 6. Install Python dependencies and trigger the C++ build for your wrapper
