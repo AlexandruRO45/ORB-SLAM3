@@ -1,56 +1,87 @@
-# .github/workflows/build_test.yml
-name: Build and Test orbslam3
+# .github/workflows/build_and_test.yml
+name: Build and Test ORB-SLAM3 Wrapper
 
 on:
   push:
-    branches: [main, master]
+    branches: ["main", "develop"]
   pull_request:
-    branches: [main, master]
-  workflow_dispatch: # Allows manual triggering
+    branches: ["main", "develop"]
 
 jobs:
-  build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+  build-and-test:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+
     strategy:
+      # When true, any failed job in the matrix cancels all other jobs
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04] # Use specific OS versions for stability [W.I.P]  windows-latest, macos-13
+        python-version: ["3.12"]
+        build_type: [Release]
+        c_compiler: [gcc]
+        include:
+          - c_compiler: gcc
+            cpp_compiler: g++
 
     steps:
-      - name: Checkout repository
+      - name: "Checkout Repository and Submodules"
         uses: actions/checkout@v4
         with:
-          submodules: "recursive" # This is critical for pulling in ORB_SLAM3_engine
+          submodules: "recursive"
 
-      - name: Set up QEMU (for ARM builds on Linux, optional but good practice)
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
+      # 2. Sets up the specified version of Python
+      - name: "Set up Python ${{ matrix.python-version }}"
+        uses: actions/setup-python@v5
         with:
-          platforms: all
+          python-version: ${{ matrix.python-version }}
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.1
-        env:
-          # Install system-level dependencies for ORB-SLAM3 on Linux before building
-          CIBW_BEFORE_BUILD_LINUX: >
-            apt-get update && apt-get install -y
-            libeigen3-dev
-            libopencv-dev
-            libboost-serialization-dev 
-            liboctomap-dev 
-            libssl-dev
+      # 3. Install all system-level dependencies from your text file
+      - name: "Install System Dependencies via Apt"
+        run: |
+          sudo apt-get update
+          # xargs is a robust way to handle the list of packages from the file
+          sudo xargs -a apt-dependencies.txt apt-get install -y --no-install-recommends
 
-          # Skip architectures that might not be supported by dependencies
-          CIBW_ARCHS_LINUX: "auto aarch64"
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
-          CIBW_ARCHS_WINDOWS: "AMD64"
+      # 4. Build and install Pangolin from a specific version tag
+      - name: "Build and Install Pangolin v0.9.1"
+        run: |
+          # Create a temporary directory for building dependencies to keep the workspace clean
+          mkdir ${{ github.workspace }}/third_party_build
+          cd ${{ github.workspace }}/third_party_build
 
-          # Skip musl builds as they often have linking issues with complex C++
-          CIBW_SKIP: "*-musllinux_*"
+          echo "Downloading Pangolin..."
+          wget -q https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v0.9.1.tar.gz -O pangolin.tar.gz
+          tar -xzf pangolin.tar.gz
+          cd Pangolin-0.9.1
+          ./scripts/install_prerequisites.sh required
 
-      - name: Store artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-wheels-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
+          echo "Configuring Pangolin build..."
+          cmake -B build -S . \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_TESTS=OFF \
+            -DBUILD_PANGOLIN_FFMPEG=OFF \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_CXX_FLAGS="-w"
+
+          echo "Building and installing Pangolin system-wide..."
+          # 'sudo' to install it into /usr/local/
+          sudo cmake --build build --config ${{ matrix.build_type }} --target install
+
+      # 5. Configure the linker path to include /usr/local/lib
+      - name: "Configure Linker Path"
+        run: |
+          echo "/usr/local/lib:" | sudo tee /etc/ld.so.conf.d/usr-local.conf
+          sudo ldconfig
+
+      # 6. Install Python dependencies and trigger the C++ build for your wrapper
+      - name: "Install Python Dependencies & Build Project"
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install .[test]
+
+      # 7. Run the test suite
+      - name: "Run Pytest Suite"
+        run: |
+          pytest -v tests/test_wrapper.py
