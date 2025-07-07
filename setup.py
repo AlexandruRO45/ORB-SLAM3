@@ -37,13 +37,14 @@ class CMakeBuild(build_ext):
                 tar.extractall(path=vocab_dst_dir)
 
         # Allow user to override build type with an environment variable
-        build_type = os.environ.get("CMAKE_BUILD_TYPE", "Release")
+        build_type = os.environ.get("CMAKE_BUILD_TYPE", "Release")  # Debug
         
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
-            f"-DCMAKE_CXX_FLAGS=-I{np.get_include()}",
+            f"-DCMAKE_CXX_FLAGS=-I{np.get_include()}", 
+            # f"-DCMAKE_CXX_FLAGS={os.environ.get('CMAKE_CXX_FLAGS', '')} -g -I{np.get_include()}",     # Debug Use Only
             f"-Wno-dev -Wno-deprecated-declarations -Wno-maybe-uninitialized" # Suppress CMake developer warnings
         ]
 
@@ -73,7 +74,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="orbslam3",
-    version="1.4.0",
+    version="1.4.1",
     description='SLAM and Global VO module for VNAV project',
     long_description="This package provides Python bindings for the ORB-SLAM3 visual SLAM system, allowing users to integrate SLAM functionalities into Python applications.",
     packages=find_packages(where='src'),

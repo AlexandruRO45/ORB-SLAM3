@@ -23,106 +23,111 @@
 namespace py = pybind11;
 
 ORBSLAM3Python::ORBSLAM3Python(std::string vocabFile, std::string settingsFile, ORB_SLAM3::System::eSensor sensorMode)
-    : vocabluaryFile(vocabFile),
+    : vocabularyFile(vocabFile),
       settingsFile(settingsFile),
       sensorMode(sensorMode),
       system(nullptr),
       bUseViewer(false),
+      m_bLoggingEnabled(true), 
+      m_fPositionJumpThreshold(1.0f),
       mbMapResetOccurred(false),
       mnResetCounter(0),
       mbFirstFrame(true),
-      mLastTrackingState(ORB_SLAM3::Tracking::SYSTEM_NOT_READY)
-{
+      mLastTrackingState(ORB_SLAM3::Tracking::SYSTEM_NOT_READY) {
     mvLastPosition = {0.0f, 0.0f, 0.0f};
 }
 
-ORBSLAM3Python::~ORBSLAM3Python()
-{
+ORBSLAM3Python::~ORBSLAM3Python() {
     if (system) {
-        std::cout << "Closing down ORB-SLAM3 system..." << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "\n Closing down ORB-SLAM3 system..." << std::endl;
         system->Shutdown();
     }
 }
 
-bool ORBSLAM3Python::initialize()
-{
-    system = std::make_shared<ORB_SLAM3::System>(vocabluaryFile, settingsFile, sensorMode, bUseViewer);
+bool ORBSLAM3Python::initialize() {
+    system = std::make_shared<ORB_SLAM3::System>(vocabularyFile, settingsFile, sensorMode, bUseViewer);
     mbFirstFrame = true;
     mbMapResetOccurred = false;
     mnResetCounter = 0;
     mLastTrackingState = ORB_SLAM3::Tracking::SYSTEM_NOT_READY;
     if (!system)
     {
-        std::cerr << "Failed to initialize ORB-SLAM3 system!" << std::endl;
+        std::cerr << "\n Failed to initialize ORB-SLAM3 system!" << std::endl;
         return false;
     }
     return true;
 }
 
-bool ORBSLAM3Python::isRunning()
-{
+bool ORBSLAM3Python::isRunning() {
     return system != nullptr;
 }
 
-void ORBSLAM3Python::reset()
-{
+void ORBSLAM3Python::reset() {
     if (system)
     {
-        std::cout << "Resetting ORB-SLAM3 system..." << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "\n Resetting ORB-SLAM3 system..." << std::endl;
         system->Reset();
         mbMapResetOccurred = true;
         mnResetCounter++;
     }
 }
 
-bool ORBSLAM3Python::processMono(cv::Mat image, double timestamp)
-{
+bool ORBSLAM3Python::postProcessFrame() {
+    this->wasMapReset(); 
+    if (mbFirstFrame)
+    {
+        mbFirstFrame = false;
+        mbMapResetOccurred = false;
+    }
+    return !system->isLost();
+}
+
+bool ORBSLAM3Python::processMono(cv::Mat image, double timestamp) {
     if (!system)
     {
-        std::cout << "processMono - System not initialized!" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processMono - System not initialized!" << std::endl;
         return false;
     }
     if (image.data)
     {
+        if (m_bLoggingEnabled)
+            std::cout << "processMono - Processing frame at t=" << timestamp << std::endl;
         pose = system->TrackMonocular(image, timestamp);
-        // Check for map reset after tracking
-        this->wasMapReset(); // Updates internal flags
-
-        bool isOk = !system->isLost();
-
-        // If first frame or reset, clear flag after detection
-        if (mbFirstFrame)
-        {
-            mbFirstFrame = false;
-            mbMapResetOccurred = false;
+        if (m_bLoggingEnabled) {
+            std::cout << "processMono - Frame processed, pose: " << pose.matrix() << std::endl;
+            std::cout << "processMono - TrackMonocular completed" << std::endl;
         }
-
-        return isOk;
+        return this->postProcessFrame();
     }
     else
     {
-        std::cout << "processMono - Invalid image data!" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processMono - Invalid image data!" << std::endl;
         return false;
     }
 }
 
-bool ORBSLAM3Python::processMonoInertial(cv::Mat image, double timestamp, std::vector<ORB_SLAM3::IMU::Point> imuMeas)
-{
+bool ORBSLAM3Python::processMonoInertial(cv::Mat image, double timestamp, std::vector<ORB_SLAM3::IMU::Point> imuMeas) {
     if (!system)
     {
-        std::cout << "processMonoInertial - System not initialized!" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processMonoInertial - System not initialized!" << std::endl;
         return false;
     }
-
-    std::cout << "processMonoInertial - Processing frame at t=" << timestamp
-              << " with " << imuMeas.size() << " IMU measurements" << std::endl;
+    if (m_bLoggingEnabled)
+        std::cout << "processMonoInertial - Processing frame at t=" << timestamp
+                  << " with " << imuMeas.size() << " IMU measurements" << std::endl;
 
     // 2. Loop through the data and convert it to the C++ struct
     for (size_t i = 0; i < imuMeas.size(); i++)
     {
-        std::cout << "processMonoInertial - IMU[" << i << "]: t=" << imuMeas[i].t
-                  << ", acc=[" << imuMeas[i].a[0] << ", " << imuMeas[i].a[1] << ", " << imuMeas[i].a[2]
-                  << "], angVel=[" << imuMeas[i].w[0] << ", " << imuMeas[i].w[1] << ", " << imuMeas[i].w[2] << "]" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processMonoInertial - IMU[" << i << "]: t=" << imuMeas[i].t
+                      << ", acc=[" << imuMeas[i].a[0] << ", " << imuMeas[i].a[1] << ", " << imuMeas[i].a[2]
+                      << "], angVel=[" << imuMeas[i].w[0] << ", " << imuMeas[i].w[1] << ", " << imuMeas[i].w[2] << "]" << std::endl;
 
         // Check for extreme values
         if (std::abs(imuMeas[i].w[0]) > 100 || std::abs(imuMeas[i].w[1]) > 100 || std::abs(imuMeas[i].w[2]) > 100)
@@ -138,105 +143,89 @@ bool ORBSLAM3Python::processMonoInertial(cv::Mat image, double timestamp, std::v
 
     if (image.data)
     {
-        std::cout << "processMonoInertial - About to call TrackMonocular" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processMonoInertial - Processing stereo frame at t=" << timestamp << std::endl;
         pose = system->TrackMonocular(image, timestamp, imuMeas);
-        std::cout << "processMonoInertial - TrackMonocular completed" << std::endl;
-
-        // Check for map reset after tracking
-        this->wasMapReset(); // Updates internal flags
-
-        bool isOk = !system->isLost();
-
-        // If first frame or reset, clear flag after detection
-        if (mbFirstFrame)
-        {
-            mbFirstFrame = false;
-            mbMapResetOccurred = false;
+        if (m_bLoggingEnabled) {
+            std::cout << "processMonoInertial - TrackMonocular completed, pose: " << pose.matrix() << std::endl;
+            std::cout << "processMonoInertial - TrackMonocular completed" << std::endl;
         }
-
-        return isOk;
+        return this->postProcessFrame();
     }
     else
     {
-        std::cout << "processMonoInertial - Invalid image data!" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processMonoInertial - Invalid image data!" << std::endl;
         return false;
     }
 }
 
-bool ORBSLAM3Python::processStereo(cv::Mat leftImage, cv::Mat rightImage, double timestamp)
-{
+bool ORBSLAM3Python::processStereo(cv::Mat leftImage, cv::Mat rightImage, double timestamp) {
     if (!system)
     {
-        std::cout << "processStereo - System not initialized!" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processStereo - System not initialized!" << std::endl;
         return false;
     }
     if (leftImage.data && rightImage.data)
     {
+        if (m_bLoggingEnabled)
+            std::cout << "processStereo - Processing stereo frame at t=" << timestamp << std::endl;
         pose = system->TrackStereo(leftImage, rightImage, timestamp);
-
-        // Check for map reset after tracking
-        this->wasMapReset(); // Updates internal flags
-
-        bool isOk = !system->isLost();
-
-        // If first frame or reset, clear flag after detection
-        if (mbFirstFrame)
-        {
-            mbFirstFrame = false;
-            mbMapResetOccurred = false;
+        if (m_bLoggingEnabled) {
+            std::cout << "processStereo - Frame processed, pose: " << pose.matrix() << std::endl;
+            std::cout << "processStereo - TrackStereo completed" << std::endl;
         }
-
-        return isOk;
+        return this->postProcessFrame();
     }
     else
     {
-        std::cout << "processStereo - Invalid image data!" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processStereo - Invalid image data!" << std::endl;
         return false;
     }
 }
 
-bool ORBSLAM3Python::processRGBD(cv::Mat image, cv::Mat depthImage, double timestamp)
-{
+bool ORBSLAM3Python::processRGBD(cv::Mat image, cv::Mat depthImage, double timestamp) {
     if (!system)
     {
-        std::cout << "processRGBD - System not initialized!" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processRGBD - System not initialized!" << std::endl;
         return false;
     }
     if (image.data && depthImage.data)
     {
+        if (m_bLoggingEnabled)
+            std::cout << "processRGBD - Processing RGB-D frame at t=" << timestamp << std::endl;
         pose = system->TrackRGBD(image, depthImage, timestamp);
-        this->wasMapReset(); // Updates internal flags
-
-        bool isOk = !system->isLost();
-
-        // If first frame or reset, clear flag after detection
-        if (mbFirstFrame)
-        {
-            mbFirstFrame = false;
-            mbMapResetOccurred = false;
+        if (m_bLoggingEnabled) {
+            std::cout << "processRGBD - Frame processed, pose: " << pose.matrix() << std::endl;
+            std::cout << "processRGBD - TrackRGBD completed" << std::endl;
         }
-
-        return isOk;
+        return this->postProcessFrame();
     }
     else
     {
-        std::cout << "processRGBD - Invalid image or depth data!" << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "processRGBD - Invalid image or depth data!" << std::endl;
         return false;
     }
 }
 
-void ORBSLAM3Python::shutdown()
-{
+void ORBSLAM3Python::shutdown() {
     if (system)
     {
-        std::cout << "Shutting down ORB-SLAM3 system..." << std::endl;
+        if (m_bLoggingEnabled)
+            std::cout << "\n Shutting down ORB-SLAM3 system..." << std::endl;
         system->Shutdown();
+        system = nullptr; 
     }
 }
 
-py::array_t<short> ORBSLAM3Python::get2DOccMap() const
-{
+py::array_t<short> ORBSLAM3Python::get2DOccMap() const {
     auto map = system->Get2DOccMap();
+    if (m_bLoggingEnabled)
+        std::cout << "get2DOccMap - Map dimensions: " << map.m_height << "x" << map.m_width << std::endl;
     return py::array_t<short>(
         {map.m_height, map.m_width}, //shape
         {map.m_width*2, 2}, //strides
@@ -244,31 +233,45 @@ py::array_t<short> ORBSLAM3Python::get2DOccMap() const
         );
 }
 
-void ORBSLAM3Python::setUseViewer(bool useViewer)
-{
+void ORBSLAM3Python::setUseViewer(bool useViewer) {
     bUseViewer = useViewer;
 }
 
-std::vector<Eigen::Matrix4f> ORBSLAM3Python::getTrajectory() const
-{
+void ORBSLAM3Python::setLogging(bool enabled) { 
+    m_bLoggingEnabled = enabled; 
+} 
+
+void ORBSLAM3Python::setResetJumpThreshold(float threshold) { 
+    m_fPositionJumpThreshold = threshold; 
+}
+
+std::vector<Eigen::Matrix4f> ORBSLAM3Python::getTrajectory() const {
     if (!system)
+    {
+        if (m_bLoggingEnabled)
+            std::cout << "getTrajectory - System not initialized!" << std::endl;
         return std::vector<Eigen::Matrix4f>();
+    }
     return system->GetCameraTrajectory();
 }
 
-int ORBSLAM3Python::getTrackingState() const
-{
+ORB_SLAM3::Tracking::eTrackingState ORBSLAM3Python::getTrackingState() const {
     if (!system)
-        return -1;
-
-    return static_cast<int>(system->GetTrackingState());
+        return ORB_SLAM3::Tracking::SYSTEM_NOT_READY;
+    if (m_bLoggingEnabled)
+        std::cout << "getTrackingState - Current tracking state: " << system->GetTrackingState() << std::endl;
+    int rawState = system->GetTrackingState();
+    if (m_bLoggingEnabled)
+        std::cout << "getTrackingState - Raw state value: " << rawState << std::endl;
+    return static_cast<ORB_SLAM3::Tracking::eTrackingState>(rawState);
+    // return static_cast<ORB_SLAM3::Tracking::eTrackingState>(system->GetTrackingState());
 }
 
-bool ORBSLAM3Python::isLost() const
-{
+bool ORBSLAM3Python::isLost() const {
     if (!system)
         return true;
-
+    if (m_bLoggingEnabled)
+        std::cout << "isLost - Checking if system is lost: " << system->isLost() << std::endl;
     return system->isLost();
 }
 
@@ -283,6 +286,8 @@ bool ORBSLAM3Python::wasMapReset()
     // Check for an explicitly called reset
     if (mbMapResetOccurred)
     {
+        if (m_bLoggingEnabled)
+            std::cout << "Map reset detected: Explicit reset flag is set." << std::endl;
         resetDetected = true;
         mbMapResetOccurred = false; // Clear the flag after reporting
         return resetDetected;
@@ -292,6 +297,8 @@ bool ORBSLAM3Python::wasMapReset()
     // Use explicit casting from int to enum type
     int rawState = system->GetTrackingState();
     ORB_SLAM3::Tracking::eTrackingState currentState = static_cast<ORB_SLAM3::Tracking::eTrackingState>(rawState);
+    if (m_bLoggingEnabled)
+        std::cout << "wasMapReset - Current tracking state: " << currentState << std::endl;
 
     if (mLastTrackingState == ORB_SLAM3::Tracking::OK &&
         (currentState == ORB_SLAM3::Tracking::NOT_INITIALIZED ||
@@ -313,6 +320,8 @@ bool ORBSLAM3Python::wasMapReset()
         float x = lastPose(0, 3);
         float y = lastPose(1, 3);
         float z = lastPose(2, 3);
+        if (m_bLoggingEnabled)
+            std::cout << "wasMapReset - Last position: (" << x << ", " << y << ", " << z << ")" << std::endl;
 
         // Calculate position difference
         if (!mbFirstFrame)
@@ -321,16 +330,16 @@ bool ORBSLAM3Python::wasMapReset()
             float dy = y - mvLastPosition[1];
             float dz = z - mvLastPosition[2];
             float positionChange = std::sqrt(dx * dx + dy * dy + dz * dz);
+            if (m_bLoggingEnabled)
+                std::cout << "wasMapReset - Position change since last frame: " << positionChange << " m" << std::endl;
 
             // If jump is too large, it's likely a reset occurred
-            // Threshold depends on your camera motion patterns
-            const float positionThreshold = 1.0f; // 1 meter threshold - adjust as needed
-
-            if (positionChange > positionThreshold &&
-                system->GetTrackingState() != ORB_SLAM3::Tracking::LOST)
+            // Threshold depends on your camera motion patterns, adjust in meters as needed
+            // For example, 1.0 m is a common threshold for many applications
+            if (positionChange > m_fPositionJumpThreshold && system->GetTrackingState() != ORB_SLAM3::Tracking::LOST)
             {
-                std::cout << "Map reset detected: Large position jump of "
-                          << positionChange << " m" << std::endl;
+                if (m_bLoggingEnabled)
+                    std::cout << "Map reset detected: Large position jump of " << positionChange << " m" << std::endl;
                 resetDetected = true;
             }
         }
@@ -344,12 +353,16 @@ bool ORBSLAM3Python::wasMapReset()
     // If reset detected, increment counter
     if (resetDetected)
     {
+        if (m_bLoggingEnabled)
+            std::cout << "wasMapReset - Incrementing reset counter." << std::endl;
         mnResetCounter++;
     }
 
     // Special case for first frame
     if (mbFirstFrame)
     {
+        if (m_bLoggingEnabled)
+            std::cout << "wasMapReset - First frame detected, resetting state." << std::endl;
         mbFirstFrame = false;
         return false;
     }
@@ -357,12 +370,19 @@ bool ORBSLAM3Python::wasMapReset()
     return resetDetected;
 }
 
-// Method to retrieve the reset counter
+
 int ORBSLAM3Python::getResetCount() const
 {
+    if (m_bLoggingEnabled)
+        std::cout << "getResetCount - Current reset counter: " << mnResetCounter << std::endl;
     return mnResetCounter;
 }
 
+Eigen::Matrix4f ORBSLAM3Python::get_pose() { 
+    if(m_bLoggingEnabled)
+        std::cout << "get_pose - Current pose: " << pose.matrix() << std::endl;
+    return pose.matrix(); 
+}
 
 PYBIND11_MODULE(_core, m)
 {
@@ -431,6 +451,8 @@ PYBIND11_MODULE(_core, m)
         .def("shutdown", &ORBSLAM3Python::shutdown)
         .def("get_2d_occmap", &ORBSLAM3Python::get2DOccMap)
         .def("set_use_viewer", &ORBSLAM3Python::setUseViewer)
+        .def("set_logging", &ORBSLAM3Python::setLogging, py::arg("enabled")) 
+        .def("set_reset_jump_threshold", &ORBSLAM3Python::setResetJumpThreshold, py::arg("threshold"))
         .def("get_trajectory", &ORBSLAM3Python::getTrajectory)
         .def("get_tracking_state", &ORBSLAM3Python::getTrackingState)
         .def("is_lost", &ORBSLAM3Python::isLost)

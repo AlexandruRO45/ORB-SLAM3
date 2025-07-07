@@ -75,4 +75,15 @@ Viewer.ViewpointX: 0.0
 Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500.0
+Viewer.imageViewScale: 1.0
 
+System.LoadAtlasFromFile: ""
+System.SaveAtlasToFile: ""
+System.thFarPoints: 40.0
+
+DenseMapping.on: 1
+DenseMapping.gridSize: 0.05
+DenseMapping.map2D: 0
+DenseMapping.camHeight: 1.5
+DenseMapping.simpleGround: 0
+DenseMapping.maxRange: 6.0

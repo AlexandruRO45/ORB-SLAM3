@@ -27,6 +27,7 @@ Camera1.cy: 248.375
 
 Camera1.k1: -0.28340811
 Camera1.k2: 0.07395907
+Camera1.k3: 0.00019359
 Camera1.p1: 0.00019359
 Camera1.p2: 1.76187114e-05
 
@@ -37,11 +38,15 @@ Camera2.cy: 255.238
 
 Camera2.k1: -0.28368365
 Camera2.k2: 0.07451284
+Camera2.k3: 0.00010473
 Camera2.p1: -0.00010473
 Camera2.p2: -3.55590700e-05
 
 Camera.width: 752
 Camera.height: 480
+
+Camera.newWidth: 600
+Camera.newHeight: 350
 
 # Camera frames per second 
 Camera.fps: 20
@@ -93,4 +98,15 @@ Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500.0
 Viewer.imageViewScale: 1.0
+Viewer.imageViewScale: 1.0
 
+System.LoadAtlasFromFile: ""
+System.SaveAtlasToFile: ""
+System.thFarPoints: 40.0
+
+DenseMapping.on: 1
+DenseMapping.gridSize: 0.05
+DenseMapping.map2D: 0
+DenseMapping.camHeight: 1.5
+DenseMapping.simpleGround: 0
+DenseMapping.maxRange: 6.0

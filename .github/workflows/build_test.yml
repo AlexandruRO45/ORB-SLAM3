@@ -16,7 +16,7 @@ jobs:
       # When true, any failed job in the matrix cancels all other jobs
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.11", "3.12"]
         build_type: [Release]
         c_compiler: [gcc]
         include:
@@ -43,37 +43,39 @@ jobs:
           sudo xargs -a apt-dependencies.txt apt-get install -y --no-install-recommends
 
       # 4. Build and install Pangolin from a specific version tag
-      - name: "Build and Install Pangolin v0.9.1"
-        run: |
-          # Create a temporary directory for building dependencies to keep the workspace clean
-          mkdir ${{ github.workspace }}/third_party_build
-          cd ${{ github.workspace }}/third_party_build
+      # --- DEPRECATED: Leaving it here just for refrence to setup it locally when needed ---
+      # - name: "Build and Install Pangolin v0.9.1"
+      #   run: |
+      #     # Create a temporary directory for building dependencies to keep the workspace clean
+      #     mkdir ${{ github.workspace }}/third_party_build
+      #     cd ${{ github.workspace }}/third_party_build
 
-          echo "Downloading Pangolin..."
-          wget -q https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v0.9.1.tar.gz -O pangolin.tar.gz
-          tar -xzf pangolin.tar.gz
-          cd Pangolin-0.9.1
-          ./scripts/install_prerequisites.sh required
+      #     echo "Downloading Pangolin..."
+      #     wget -q https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v0.9.1.tar.gz -O pangolin.tar.gz
+      #     tar -xzf pangolin.tar.gz
+      #     cd Pangolin-0.9.1
+      #     ./scripts/install_prerequisites.sh required
 
-          echo "Configuring Pangolin build..."
-          cmake -B build -S . \
-            -DBUILD_EXAMPLES=OFF \
-            -DBUILD_TESTS=OFF \
-            -DBUILD_PANGOLIN_FFMPEG=OFF \
-            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_CXX_FLAGS="-w"
+      #     echo "Configuring Pangolin build..."
+      #     cmake -B build -S . \
+      #       -DBUILD_EXAMPLES=OFF \
+      #       -DBUILD_TESTS=OFF \
+      #       -DBUILD_PANGOLIN_FFMPEG=OFF \
+      #       -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+      #       -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+      #       -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+      #       -DCMAKE_CXX_FLAGS="-w"
 
-          echo "Building and installing Pangolin system-wide..."
-          # 'sudo' to install it into /usr/local/
-          sudo cmake --build build --config ${{ matrix.build_type }} --target install
+      #     echo "Building and installing Pangolin system-wide..."
+      #     # 'sudo' to install it into /usr/local/
+      #     sudo cmake --build build --config ${{ matrix.build_type }} --target install
 
       # 5. Configure the linker path to include /usr/local/lib
-      - name: "Configure Linker Path"
-        run: |
-          echo "/usr/local/lib:" | sudo tee /etc/ld.so.conf.d/usr-local.conf
-          sudo ldconfig
+      # - name: "Configure Linker Path"
+      #   run: |
+      #     echo "/usr/local/lib:" | sudo tee /etc/ld.so.conf.d/usr-local.conf
+      #     sudo ldconfig
+      # -----------------------------------------------------------------------------------
 
       # 6. Install Python dependencies and trigger the C++ build for your wrapper
       - name: "Install Python Dependencies & Build Project"
