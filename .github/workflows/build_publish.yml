@@ -5,6 +5,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -44,7 +45,7 @@ jobs:
       - name: "Store Wheel for Publishing"
         uses: actions/upload-artifact@v4
         with:
-          name: python-wheels
+          name: python-wheel-${{ matrix.python-version }}
           path: dist/*.whl
 
   publish_to_pypi:
@@ -63,8 +64,10 @@ jobs:
       - name: "Download all wheels"
         uses: actions/download-artifact@v4
         with:
+          pattern: python-wheel-*
           name: python-wheels
           path: dist/
+          merge-multiple: true
 
       - name: "Publish package to PyPI"
         uses: pypa/gh-action-pypi-publish@v1.12.4
