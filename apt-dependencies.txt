@@ -1,0 +1,12 @@
+build-essential
+cmake
+git
+wget
+libeigen3-dev 
+libopencv-dev 
+libboost-serialization-dev 
+liboctomap-dev 
+libssl-dev
+libpcl-dev
+libglew-dev
+libgl1-mesa-dev
