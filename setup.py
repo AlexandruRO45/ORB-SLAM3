@@ -44,7 +44,11 @@ class CMakeBuild(build_ext):
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
             f"-DCMAKE_CXX_FLAGS=-I{np.get_include()}", 
-            # f"-DCMAKE_CXX_FLAGS={os.environ.get('CMAKE_CXX_FLAGS', '')} -g -I{np.get_include()}",     # Debug Use Only
+            # --- Debug Use Only ---
+            # f"-DCMAKE_CXX_FLAGS={os.environ.get('CMAKE_CXX_FLAGS', '')} -fsanitize=address -g -I{np.get_include()}",   
+            # f"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address",
+            # f"-DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address",
+            # ------
             f"-Wno-dev -Wno-deprecated-declarations -Wno-maybe-uninitialized" # Suppress CMake developer warnings
         ]
 
