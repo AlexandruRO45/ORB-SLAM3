@@ -3,7 +3,8 @@ requires = [
     "setuptools>=42",
     "wheel",
     "cmake>=3.12",
-    "numpy"
+    "numpy",
+    "opencv-python"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -30,11 +31,12 @@ classifiers = [
     # ... other classifiers
 ]
 dependencies = [
-    "numpy"
+    "numpy",
+    "opencv-python"
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=6.0"]
+test = ["pytest>=6.0", "pyyaml>=5.4"]
 
 [project.urls]
 "Bug Tracker" = "https://github.com/AlexandruRO45/ORB-SLAM3/issues"

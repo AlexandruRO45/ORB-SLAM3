@@ -19,6 +19,9 @@ wheelhouse/
 build/
 dist/
 
+# Vocubularies
+ORBvoc.txt
+
 # C/C++ artifacts
 *.o
 *.so
