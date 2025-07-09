@@ -11,11 +11,9 @@ build-backend = "setuptools.build_meta"
 # PEP 621 Project metadata
 [project]
 name = "pywrapped_orbslam3"
-dynamic = ["version", "readme"] # Indicates version/readme are loaded from other files
+version = "1.4.1"
 description = "SLAM and Global VO module for VNAV project"
-maintainers = [
-    { name = "Alex S.", email = "savaalexandru562@gmail.com" }
-]
+maintainers = [{ name = "Alex S.", email = "savaalexandru562@gmail.com" }]
 license = { file = "LICENSE" } # Points to your license file
 requires-python = ">=3.8"
 classifiers = [

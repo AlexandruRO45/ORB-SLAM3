@@ -77,14 +77,8 @@ class CMakeBuild(build_ext):
         )
 
 setup(
-    name="pywrapped_orbslam3",
-    version="1.4.1",
-    description='SLAM and Global VO module for VNAV project',
-    long_description="This package provides Python bindings for the ORB-SLAM3 visual SLAM system, allowing users to integrate SLAM functionalities into Python applications.",
-    long_description_content_type="text/markdown",
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
-    install_requires=["numpy","opencv-python"],
     ext_modules=[CMakeExtension("orbslam3._core", sourcedir=".")], 
     cmdclass={"build_ext": CMakeBuild},
     package_data={
@@ -92,6 +86,4 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-    extras_require={"test": ["pytest>=6.0", "pyyaml>=5.4"]},
-    python_requires=">=3.8",
 )
