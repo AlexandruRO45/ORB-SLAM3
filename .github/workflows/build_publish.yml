@@ -36,12 +36,14 @@ jobs:
 
       - name: "Install Python Build Tools"
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install build
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install cibuildwheel
 
       - name: "Build Wheel"
         run: |
-          python -m build --wheel
+          python -m cibuildwheel --output-dir dist
+        env:
+          CIBW_ARCHS_LINUX: "x86_64"
 
       - name: "Store Wheel for Publishing"
         uses: actions/upload-artifact@v4
