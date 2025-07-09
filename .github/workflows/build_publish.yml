@@ -59,7 +59,7 @@ jobs:
 
     environment:
       name: pypi
-      url: https://pypi.org/p/pywrapped_orbslam3
+      url: https://pypi.org/project/pywrapped_orbslam3
 
     steps:
       - name: "Download all wheels"
@@ -70,4 +70,4 @@ jobs:
           merge-multiple: true
 
       - name: "Publish package to PyPI"
-        uses: pypa/gh-action-pypi-publish@v1.12.4
+        uses: pypa/gh-action-pypi-publish@release/v1

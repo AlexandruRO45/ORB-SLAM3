@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 # PEP 621 Project metadata
 [project]
-name = "orbslam3"
+name = "pywrapped_orbslam3"
 dynamic = ["version", "readme"] # Indicates version/readme are loaded from other files
 description = "SLAM and Global VO module for VNAV project"
 maintainers = [
