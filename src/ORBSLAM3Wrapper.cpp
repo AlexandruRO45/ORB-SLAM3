@@ -46,7 +46,7 @@ ORBSLAM3Python::~ORBSLAM3Python() {
 }
 
 bool ORBSLAM3Python::initialize() {
-    system = std::make_shared<ORB_SLAM3::System>(vocabularyFile, settingsFile, sensorMode, bUseViewer);
+    system = std::make_unique<ORB_SLAM3::System>(vocabularyFile, settingsFile, sensorMode, bUseViewer);
     mbFirstFrame = true;
     mbMapResetOccurred = false;
     mnResetCounter = 0;

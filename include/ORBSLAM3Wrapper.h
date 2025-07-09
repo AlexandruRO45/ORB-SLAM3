@@ -52,7 +52,7 @@ private:
   std::string vocabularyFile; 
   std::string settingsFile;
   ORB_SLAM3::System::eSensor sensorMode;
-  std::shared_ptr<ORB_SLAM3::System> system;
+  std::unique_ptr<ORB_SLAM3::System> system;
   Sophus::SE3f pose;
 
   // --- Configuration and State Members ---
