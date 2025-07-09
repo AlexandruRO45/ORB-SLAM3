@@ -33,9 +33,8 @@ jobs:
             set -e -x
             # Install dependencies needed to build OpenCV
             yum install -y epel-release
-            yum groupinstall "Development Tools"
-            yum install -y unzip wget
-            source /opt/rh/devtoolset-10/enable
+            # yum groupinstall "Development Tools" # Not really needed all of them
+            yum install -y cmake gcc-c++ make wget unzip
 
             # Get other dependencies from the previous step
             yum install -y eigen3-devel boost-devel octomap-devel openssl-devel pcl-devel glew-devel mesa-libGL-devel
