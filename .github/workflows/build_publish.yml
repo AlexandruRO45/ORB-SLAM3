@@ -32,7 +32,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: |
             set -e -x
             # Install dependencies needed to build OpenCV
-            yum install -y epel-release centos-release-scl-rh
+            yum install -y epel-release
             yum install -y devtoolset-10-gcc* unzip wget
             source /opt/rh/devtoolset-10/enable
 
