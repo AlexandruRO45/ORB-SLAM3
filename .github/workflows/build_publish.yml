@@ -29,8 +29,38 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_LINUX: "x86_64"
-          # Install all C++ dependencies inside the manylinux container
-          CIBW_BEFORE_BUILD_LINUX: "yum install -y epel-release && yum install -y eigen3-devel opencv-devel boost-devel octomap-devel openssl-devel pcl-devel glew-devel mesa-libGL-devel"
+          CIBW_BEFORE_BUILD_LINUX: |
+            set -e -x
+            # Install dependencies needed to build OpenCV
+            yum install -y epel-release centos-release-scl-rh
+            yum install -y devtoolset-10-gcc* unzip wget
+            source /opt/rh/devtoolset-10/enable
+
+            # Get other dependencies from the previous step
+            yum install -y eigen3-devel boost-devel octomap-devel openssl-devel pcl-devel glew-devel mesa-libGL-devel
+
+            # Define OpenCV version and download
+            OPENCV_VERSION="4.8.0"
+            wget -q https://github.com/opencv/opencv/archive/refs/tags/${OPENCV_VERSION}.zip
+            unzip -q ${OPENCV_VERSION}.zip
+
+            # Configure, build, and install OpenCV
+            cd opencv-${OPENCV_VERSION}
+            mkdir build && cd build
+            cmake .. \
+              -D CMAKE_BUILD_TYPE=RELEASE \
+              -D CMAKE_INSTALL_PREFIX=/usr/local \
+              -D BUILD_TESTS=OFF \
+              -D BUILD_PERF_TESTS=OFF \
+              -D BUILD_EXAMPLES=OFF \
+              -D WITH_TBB=OFF \
+              -D WITH_OPENGL=OFF
+            make -j$(nproc)
+            make install
+
+            # Clean up to keep the wheel smaller
+            cd /
+            rm -rf opencv-${OPENCV_VERSION} ${OPENCV_VERSION}.zip
 
       - name: "Store PyPI wheels"
         uses: actions/upload-artifact@v4
