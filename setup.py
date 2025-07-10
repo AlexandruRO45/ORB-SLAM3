@@ -2,7 +2,6 @@ import os
 import subprocess
 import sys
 import tarfile
-import numpy as np
 from pathlib import Path
 from setuptools import Extension, setup, find_packages 
 from setuptools.command.build_ext import build_ext
@@ -37,7 +36,7 @@ class CMakeBuild(build_ext):
                 tar.extractall(path=vocab_dst_dir)
 
         # Allow user to override build type with an environment variable
-        build_type = os.environ.get("CMAKE_BUILD_TYPE", "Release")  # Debug
+        build_type = os.environ.get("CMAKE_BUILD_TYPE", "Release")  # or Debug if needed
         
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",

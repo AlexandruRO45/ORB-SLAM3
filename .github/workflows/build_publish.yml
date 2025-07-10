@@ -39,7 +39,7 @@ jobs:
             yum install -y cmake gcc-c++ make wget unzip
 
             # Get other dependencies from the previous step
-            yum install -y eigen3-devel boost-devel octomap-devel openssl-devel pcl-devel glew-devel mesa-libGL-devel
+            yum install -y eigen3-devel boost-devel octomap-devel openssl-devel pcl-devel
 
             # Define OpenCV version and download
             OPENCV_VERSION="4.8.0"

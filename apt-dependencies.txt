@@ -8,5 +8,3 @@ libboost-serialization-dev
 liboctomap-dev 
 libssl-dev
 libpcl-dev
-libglew-dev
-libgl1-mesa-dev

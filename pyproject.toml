@@ -5,13 +5,13 @@ build-backend = "setuptools.build_meta"
 # PEP 621 Project metadata
 [project]
 name = "pywrapped_orbslam3"
-version = "1.4.5"
+version = "1.4.6"
 description = "SLAM and Global VO module for VNAV project"
 maintainers = [{ name = "Alex S.", email = "savaalexandru562@gmail.com" }]
 license = { file = "LICENSE" } # Points to your license file
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 classifiers = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Beta',
     'Intended Audience :: Developers',
     'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
     'Programming Language :: C++',
