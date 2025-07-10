@@ -3,7 +3,7 @@
 import pytest
 import numpy as np
 import os
-import orbslam3 
+import pywrapped_orbslam3 
 import cv2
 
 # --- Configuration ---
@@ -78,7 +78,7 @@ def create_dummy_imu_data(timestamp, num_samples=10):
     for i in range(num_samples):
         imu_ts = timestamp - (0.01 * (num_samples - i))
         imu_points.append(
-            orbslam3.IMU.Point(
+            pywrapped_orbslam3.IMU.Point(
                 acc_x=0.0, acc_y=9.8, acc_z=0.0,
                 ang_vel_x=0.0, ang_vel_y=0.0, ang_vel_z=0.0,
                 timestamp=imu_ts
@@ -88,10 +88,10 @@ def create_dummy_imu_data(timestamp, num_samples=10):
 
 # --- Consolidated Fixtures ---
 @pytest.fixture(scope="function", params=[
-    pytest.param(("mono", orbslam3.Sensor.MONOCULAR), id="MONOCULAR"),
-    pytest.param(("mono_inertial", orbslam3.Sensor.IMU_MONOCULAR), id="MONO_INERTIAL"),
-    pytest.param(("stereo", orbslam3.Sensor.STEREO), id="STEREO"),
-    pytest.param(("rgbd", orbslam3.Sensor.RGBD), id="RGBD"),
+    pytest.param(("mono", pywrapped_orbslam3.Sensor.MONOCULAR), id="MONOCULAR"),
+    pytest.param(("mono_inertial", pywrapped_orbslam3.Sensor.IMU_MONOCULAR), id="MONO_INERTIAL"),
+    pytest.param(("stereo", pywrapped_orbslam3.Sensor.STEREO), id="STEREO"),
+    pytest.param(("rgbd", pywrapped_orbslam3.Sensor.RGBD), id="RGBD"),
 ])
 def system_for_all_modes(request):
     """
@@ -101,7 +101,7 @@ def system_for_all_modes(request):
     config_key, sensor_type = request.param
     system_name = request.node.callspec.id
 
-    slam = orbslam3.System(VOCAB_FILE, CONFIGS[config_key], sensor_type)
+    slam = pywrapped_orbslam3.System(VOCAB_FILE, CONFIGS[config_key], sensor_type)
     assert slam.initialize() is True, f"Failed to initialize {system_name} system."
     
     yield slam, config_key
@@ -112,7 +112,7 @@ class TestSystemLifecycle:
 
     def test_system_creation(self):
         """Verify that the system object can be instantiated without error."""
-        slam = orbslam3.System(VOCAB_FILE, CONFIGS["mono"], orbslam3.Sensor.MONOCULAR)
+        slam = pywrapped_orbslam3.System(VOCAB_FILE, CONFIGS["mono"], pywrapped_orbslam3.Sensor.MONOCULAR)
         assert slam is not None
         assert not slam.is_running()
 
@@ -123,8 +123,8 @@ class TestSystemLifecycle:
         slam, _ = system_for_all_modes
         assert slam.is_running() is True
         assert slam.get_tracking_state() in [
-            orbslam3.TrackingState.SYSTEM_NOT_READY,
-            orbslam3.TrackingState.NO_IMAGES_YET
+            pywrapped_orbslam3.TrackingState.SYSTEM_NOT_READY,
+            pywrapped_orbslam3.TrackingState.NO_IMAGES_YET
         ]
 
 class TestDataRetrieval:
@@ -133,7 +133,7 @@ class TestDataRetrieval:
     def test_get_initial_state(self, system_for_all_modes):
         """Test the initial values returned by getter methods for all modes."""
         slam, _ = system_for_all_modes
-        assert slam.get_tracking_state() in [orbslam3.TrackingState.SYSTEM_NOT_READY, orbslam3.TrackingState.NO_IMAGES_YET]
+        assert slam.get_tracking_state() in [pywrapped_orbslam3.TrackingState.SYSTEM_NOT_READY, pywrapped_orbslam3.TrackingState.NO_IMAGES_YET]
         assert isinstance(slam.is_lost(), bool)
         assert np.all(slam.get_pose() == np.eye(4))
         assert slam.get_trajectory() == []
@@ -155,7 +155,7 @@ class TestDataRetrieval:
         else:
             pytest.fail(f"Test logic for advancing state of '{system_type}' is not implemented.")
             
-        assert isinstance(slam.get_tracking_state(), orbslam3.TrackingState)
+        assert isinstance(slam.get_tracking_state(), pywrapped_orbslam3.TrackingState)
 
 class TestSystemControl:
     """Tests methods that control the system's behavior, like reset."""
@@ -183,7 +183,7 @@ class TestSystemControl:
 
     def test_set_use_viewer(self):
         """Tests the setUseViewer method can be called without error."""
-        slam = orbslam3.System(VOCAB_FILE, CONFIGS["mono"], orbslam3.Sensor.MONOCULAR)
+        slam = pywrapped_orbslam3.System(VOCAB_FILE, CONFIGS["mono"], pywrapped_orbslam3.Sensor.MONOCULAR)
         slam.set_use_viewer(True)
         assert True
 
@@ -193,7 +193,7 @@ class TestIMUHelpers:
     def test_imu_point_creation_and_access(self):
         """Verify IMU.Point can be created and its members accessed."""
         ts = 12345.6789
-        p = orbslam3.IMU.Point(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, ts)
+        p = pywrapped_orbslam3.IMU.Point(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, ts)
         assert p.ax == 1.0
         assert p.wy == 5.0
         assert p.t == ts

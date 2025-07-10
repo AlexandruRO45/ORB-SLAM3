@@ -1,4 +1,4 @@
-# orbslam3/_version.py
+# pywrapped_orbslam3/_version.py
 
 # The single source of truth for the package version and additional information
 __version__ = "1.4.1"

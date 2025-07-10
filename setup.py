@@ -22,9 +22,9 @@ class CMakeBuild(build_ext):
 
         """ The destination directory for the compiled extension.
                 self.get_ext_fullpath(ext.name) will return something like:
-                    build/lib.linux-x86_64-3.9/orbslam3/_core.so
+                    build/lib.linux-x86_64-3.9/pywrapped_orbslam3/_core.so
                 .parent.resolve() gives us the final package directory:
-                    build/lib.linux-x86_64-3.9/orbslam3/ 
+                    build/lib.linux-x86_64-3.9/pywrapped_orbslam3/ 
         """
         extdir = Path(self.get_ext_fullpath(ext.name)).parent.resolve()
 
@@ -79,10 +79,10 @@ class CMakeBuild(build_ext):
 setup(
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
-    ext_modules=[CMakeExtension("orbslam3._core", sourcedir=".")], 
+    ext_modules=[CMakeExtension("pywrapped_orbslam3._core", sourcedir=".")], 
     cmdclass={"build_ext": CMakeBuild},
     package_data={
-        'orbslam3': ['*.so', '*.pyd', '*.dylib'], 
+        'pywrapped_orbslam3': ['*.so', '*.pyd', '*.dylib'], 
     },
     include_package_data=True,
     zip_safe=False,
