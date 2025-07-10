@@ -31,7 +31,7 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_BUILD: "cp311-* cp312-*"
           CIBW_SKIP: "*-musllinux_*"
-          CIBW_BEFORE_BUILD_LINUX: |
+          CIBW_BEFORE_ALL_LINUX: |
             set -e -x
             # Install dependencies needed to build OpenCV
             yum install -y epel-release
