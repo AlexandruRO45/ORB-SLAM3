@@ -111,6 +111,43 @@ void ORBSLAM3Python::reset()
 // Section 2.2: Frame Processing
 // -----------------------------------------------------------------------------
 
+// bool ORBSLAM3Python::processFrame(const cv::Mat &image, const cv::Mat &rightImage, const cv::Mat &depthImage, const cv::Mat &mask, double timestamp, const std::vector<ORB_SLAM3::IMU::Point> &imuMeas)
+// {
+//     if (!system)
+//         return false;
+
+//     // The core ORB-SLAM3 Tracking object can accept a mask to ignore features in certain regions.
+//     // We pass the mask to the tracker before processing the frame.
+//     if (!mask.empty())
+//     {
+//         system->GetTracker()->SetMask(mask);
+//     }
+
+//     // Call the correct internal Track... function based on the sensor mode
+//     // set during initialization.
+//     switch (sensorMode)
+//     {
+//     case ORB_SLAM3::System::eSensor::MONOCULAR:
+//         pose = system->TrackMonocular(image, timestamp);
+//         break;
+//     case ORB_SLAM3::System::eSensor::STEREO:
+//         pose = system->TrackStereo(image, rightImage, timestamp);
+//         break;
+//     case ORB_SLAM3::System::eSensor::RGBD:
+//         pose = system->TrackRGBD(image, depthImage, timestamp);
+//         break;
+//     case ORB_SLAM3::System::eSensor::IMU_MONOCULAR:
+//         pose = system->TrackMonocular(image, timestamp, imuMeas);
+//         break;
+//     // TODO: ... add cases for IMU_STEREO and IMU_RGBD when ready
+//     default:
+//         std::cerr << "Unsupported sensor mode in processFrame!" << std::endl;
+//         return false;
+//     }
+
+//     return this->postProcessFrame();
+// }
+
 bool ORBSLAM3Python::processMono(cv::Mat image, double timestamp)
 {
     if (!system)
@@ -226,33 +263,6 @@ Eigen::Matrix4f ORBSLAM3Python::get_pose()
     return pose.matrix();
 }
 
-py::dict ORBSLAM3Python::get_current_pose()
-{
-    if (!system || pose.matrix().isIdentity())
-    {
-        return py::none();
-    }
-
-    Eigen::Quaternionf q(pose.rotationMatrix());
-    Eigen::Vector3f t = pose.translation();
-
-    py::dict p;
-    // Return quaternion as [w, x, y, z] for standard Python libraries (e.g., scipy)
-    py::array_t<float> orientation_arr(4);
-    float *orientation_ptr = static_cast<float *>(orientation_arr.request().ptr);
-    orientation_ptr[0] = q.w();
-    orientation_ptr[1] = q.x();
-    orientation_ptr[2] = q.y();
-    orientation_ptr[3] = q.z();
-
-    p["position"] = py::array_t<float>(3, t.data());
-    p["orientation"] = orientation_arr;
-    p["timestamp"] = system->GetLastTrackedFrameTimestamp();
-    p["covariance"] = py::none();
-
-    return p;
-}
-
 std::vector<Eigen::Matrix4f> ORBSLAM3Python::getTrajectory() const
 {
     if (!system)
@@ -260,57 +270,59 @@ std::vector<Eigen::Matrix4f> ORBSLAM3Python::getTrajectory() const
     return system->GetCameraTrajectory();
 }
 
-py::dict ORBSLAM3Python::get_map_graph()
-{
-    if (!system)
-        return py::dict();
-
-    std::vector<ORB_SLAM3::KeyFrame *> vpKFs = system->GetAtlas()->GetAllKeyFrames();
-    py::list nodes;
-    py::list edges;
-
-    for (ORB_SLAM3::KeyFrame *pKF : vpKFs)
-    {
-        if (!pKF || pKF->isBad())
-            continue;
-
-        // Create MapNode dictionary
-        py::dict node;
-        Sophus::SE3f Tcw = pKF->GetPose();
-        Eigen::Quaternionf q(Tcw.rotationMatrix());
-
-        py::dict pose_dict;
-        pose_dict["position"] = py::array_t<float>(3, Tcw.translation().data());
-        pose_dict["orientation"] = py::array_t<float>({q.w(), q.x(), q.y(), q.z()});
-        pose_dict["timestamp"] = pKF->mTimeStamp;
-        pose_dict["covariance"] = py::none();
-
-        node["id"] = pKF->mnId;
-        node["pose"] = pose_dict;
-        node["timestamp"] = pKF->mTimeStamp;
-        nodes.append(node);
-
-        // Create MapEdge dictionaries
-        for (ORB_SLAM3::KeyFrame *pConn : pKF->GetConnectedKeyFrames())
-        {
-            py::dict edge;
-            edge["from_node"] = pKF->mnId;
-            edge["to_node"] = pConn->mnId;
-            edges.append(edge);
-        }
-    }
-
-    py::dict map_graph;
-    map_graph["nodes"] = nodes;
-    map_graph["edges"] = edges;
-    map_graph["timestamp"] = system->GetLastTrackedFrameTimestamp();
-    return map_graph;
-}
-
 py::array_t<short> ORBSLAM3Python::get2DOccMap() const
 {
     auto map = system->Get2DOccMap();
     return py::array_t<short>({map.m_height, map.m_width}, {map.m_width * 2, 2}, &map.data.front());
+}
+
+std::tuple<std::vector<MapNodeData>, std::vector<MapEdgeData>> ORBSLAM3Python::getMapGraph()
+{
+    // Access the Atlas directly through the member pointer 'mpAtlas' in the ORB_SLAM3::System object.
+    if (!system || !system->mpAtlas)
+    {
+        return {};
+    }
+
+    std::vector<MapNodeData> nodes;
+    std::vector<MapEdgeData> edges;
+
+    // Call the GetAllKeyFrames() method on the mpAtlas object.
+    const std::vector<ORB_SLAM3::KeyFrame *> allKeyFrames = system->mpAtlas->GetAllKeyFrames();
+
+    // Use a set for efficient lookup to ensure edges are only between keyframes in the current active map.
+    const std::unordered_set<ORB_SLAM3::KeyFrame *> keyFrameSet(allKeyFrames.begin(), allKeyFrames.end());
+
+    for (ORB_SLAM3::KeyFrame *pKF : allKeyFrames)
+    {
+        if (!pKF || pKF->isBad())
+            continue;
+
+        // 1. Create a MapNodeData object for each valid keyframe.
+        // GetPoseInverse() provides the pose of the camera in world coordinates (Twc).
+        nodes.push_back({(int)pKF->mnId,
+                         pKF->GetPoseInverse().matrix(),
+                         pKF->mTimeStamp});
+
+        // 2. Create MapEdgeData for its connections from the covisibility graph.
+        // GetCovisibilityConnectedKeyFrames() is a method on the KeyFrame object.
+        const auto &connectedKeyFrames = pKF->GetCovisibilityConnectedKeyFrames();
+        for (ORB_SLAM3::KeyFrame *pConnKF : connectedKeyFrames)
+        {
+            if (!pConnKF || pConnKF->isBad())
+                continue;
+
+            // To avoid duplicate edges (e.g., 1->2 and 2->1), only add an edge
+            // if the current keyframe's ID is less than the connected one's.
+            if (pKF->mnId < pConnKF->mnId && keyFrameSet.count(pConnKF))
+            {
+                edges.push_back({(int)pKF->mnId,
+                                 (int)pConnKF->mnId,
+                                 (float)pKF->GetCovisibilityWeight(pConnKF)});
+            }
+        }
+    }
+    return std::make_tuple(nodes, edges);
 }
 
 // -----------------------------------------------------------------------------
@@ -451,9 +463,7 @@ PYBIND11_MODULE(_core, m)
         .def("is_lost", &ORBSLAM3Python::isLost)
         .def("get_tracking_state", &ORBSLAM3Python::getTrackingState)
         .def("get_pose", &ORBSLAM3Python::get_pose, "Returns pose as a 4x4 Eigen Matrix.")
-        .def("get_current_pose", &ORBSLAM3Python::get_current_pose, "Returns pose as a Python dictionary.")
         .def("get_trajectory", &ORBSLAM3Python::getTrajectory)
-        .def("get_map_graph", &ORBSLAM3Python::get_map_graph, "Returns the full map graph as a dictionary.")
         .def("get_2d_occmap", &ORBSLAM3Python::get2DOccMap)
 
         // Map Reset Detection

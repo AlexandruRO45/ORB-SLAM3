@@ -37,7 +37,23 @@ namespace ORB_SLAM3
 namespace cv
 {
   class Mat;
-}
+} // namespace OpenCV
+
+// --- A simple struct to hold data for a MapNode ---
+struct MapNodeData
+{
+  int id;
+  Eigen::Matrix4f pose;
+  double timestamp;
+};
+
+// A simple struct to hold data for a MapEdge
+struct MapEdgeData
+{
+  int from_node_id;
+  int to_node_id;
+  float weight;
+};
 
 // Use pybind11 namespace
 namespace py = pybind11;
@@ -96,6 +112,12 @@ public:
   // Section 2.3: Frame Processing
   // -------------------------------------------------------------------------
 
+  // bool processFrame(const cv::Mat &image,
+  //                   const cv::Mat &rightImage, // Can be empty for Mono/RGBD
+  //                   const cv::Mat &depthImage, // Can be empty for Mono/Stereo
+  //                   const cv::Mat &mask,       // Can be empty if no filtering
+  //                   double timestamp,
+  //                   const std::vector<ORB_SLAM3::IMU::Point> &imuMeas);
   bool processMono(cv::Mat image, double timestamp);
   bool processStereo(cv::Mat leftImage, cv::Mat rightImage, double timestamp);
   bool processRGBD(cv::Mat image, cv::Mat depthImage, double timestamp);
@@ -108,10 +130,9 @@ public:
   ORB_SLAM3::Tracking::eTrackingState getTrackingState() const;
   bool isLost() const;
   Eigen::Matrix4f get_pose();
-  py::dict get_current_pose();
   std::vector<Eigen::Matrix4f> getTrajectory() const;
-  py::dict get_map_graph();
   py::array_t<short> get2DOccMap() const;
+  std::tuple<std::vector<MapNodeData>, std::vector<MapEdgeData>> getMapGraph();
 
   // -------------------------------------------------------------------------
   // Section 2.5: Map Reset Detection
