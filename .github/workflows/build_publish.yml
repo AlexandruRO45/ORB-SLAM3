@@ -1,0 +1,133 @@
+# .github/workflows/build_publish.yml
+name: Build and Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  # JOB 1: Build cross-platform wheels for PyPI
+  build_manylinux_wheels:
+    name: "Build manylinux Wheels"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Checkout Repository and Submodules"
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
+      - name: "Install Python Build Tools"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cibuildwheel
+
+      - name: "Build Wheels with cibuildwheel"
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS_LINUX: "x86_64"
+          CIBW_BUILD: "cp311-* cp312-*"
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_BEFORE_ALL_LINUX: |
+            set -e -x
+            # Install dependencies needed to build OpenCV
+            yum install -y epel-release
+            # yum groupinstall "Development Tools" # Not really needed all of them
+            yum install -y cmake gcc-c++ make wget unzip
+
+            # Get other dependencies from the previous step
+            yum install -y eigen3-devel boost-devel octomap-devel openssl-devel pcl-devel
+
+            # Define OpenCV version and download
+            OPENCV_VERSION="4.8.0"
+            wget -q https://github.com/opencv/opencv/archive/refs/tags/${OPENCV_VERSION}.zip
+            unzip -q ${OPENCV_VERSION}.zip
+
+            # Configure, build, and install OpenCV
+            cd opencv-${OPENCV_VERSION}
+            mkdir build && cd build
+            cmake .. \
+              -D CMAKE_BUILD_TYPE=RELEASE \
+              -D CMAKE_INSTALL_PREFIX=/usr/local \
+              -D BUILD_TESTS=OFF \
+              -D BUILD_PERF_TESTS=OFF \
+              -D BUILD_EXAMPLES=OFF \
+              -D WITH_TBB=OFF \
+              -D WITH_OPENGL=OFF
+            make -j$(nproc)
+            make install
+
+            # Clean up to keep the wheel smaller
+            cd /
+            rm -rf opencv-${OPENCV_VERSION} ${OPENCV_VERSION}.zip
+
+      - name: "Store PyPI wheels"
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-wheels
+          path: wheelhouse/*.whl
+
+  # JOB 2: Build a native wheel specifically for Ubuntu
+  build_ubuntu_wheel:
+    name: "Build Native Ubuntu Wheel for Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: "Checkout Repository and Submodules"
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
+      - name: "Set up Python ${{ matrix.python-version }}"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: "Install Ubuntu System Dependencies"
+        run: |
+          sudo apt-get update
+          sudo xargs -a apt-dependencies.txt apt-get install -y --no-install-recommends
+
+      - name: "Install Python Build Tools"
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install build
+
+      - name: "Build wheel with python-build"
+        run: python -m build --wheel --outdir wheelhouse_artifact .
+
+      - name: "Store Ubuntu wheel"
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-native-wheel-python-${{ matrix.python-version }}
+          path: wheelhouse_artifact/*.whl
+
+  # JOB 3: Publish to PyPI
+  publish_to_pypi:
+    name: "Publish to PyPI"
+    # This job only runs after the manylinux wheels are built
+    needs: build_manylinux_wheels
+    # This job only runs when a new tag is pushed
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/project/pywrapped_orbslam3
+    steps:
+      - name: "Download PyPI wheels"
+        uses: actions/download-artifact@v4
+        with:
+          name: pypi-wheels
+          path: dist/
+
+      - name: "Publish package to PyPI"
+        uses: pypa/gh-action-pypi-publish@release/v1

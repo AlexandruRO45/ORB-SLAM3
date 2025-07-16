@@ -2,7 +2,6 @@ import os
 import subprocess
 import sys
 import tarfile
-import numpy as np
 from pathlib import Path
 from setuptools import Extension, setup, find_packages 
 from setuptools.command.build_ext import build_ext
@@ -22,9 +21,9 @@ class CMakeBuild(build_ext):
 
         """ The destination directory for the compiled extension.
                 self.get_ext_fullpath(ext.name) will return something like:
-                    build/lib.linux-x86_64-3.9/orbslam3/_core.so
+                    build/lib.linux-x86_64-3.9/pywrapped_orbslam3/_core.so
                 .parent.resolve() gives us the final package directory:
-                    build/lib.linux-x86_64-3.9/orbslam3/ 
+                    build/lib.linux-x86_64-3.9/pywrapped_orbslam3/ 
         """
         extdir = Path(self.get_ext_fullpath(ext.name)).parent.resolve()
 
@@ -37,7 +36,7 @@ class CMakeBuild(build_ext):
                 tar.extractall(path=vocab_dst_dir)
 
         # Allow user to override build type with an environment variable
-        build_type = os.environ.get("CMAKE_BUILD_TYPE", "Release")  # Debug
+        build_type = os.environ.get("CMAKE_BUILD_TYPE", "Release")  # or Debug if needed
         
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
@@ -77,20 +76,13 @@ class CMakeBuild(build_ext):
         )
 
 setup(
-    name="orbslam3",
-    version="1.4.1",
-    description='SLAM and Global VO module for VNAV project',
-    long_description="This package provides Python bindings for the ORB-SLAM3 visual SLAM system, allowing users to integrate SLAM functionalities into Python applications.",
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
-    install_requires=["numpy","opencv-python"],
-    ext_modules=[CMakeExtension("orbslam3._core", sourcedir=".")], 
+    ext_modules=[CMakeExtension("pywrapped_orbslam3._core", sourcedir=".")], 
     cmdclass={"build_ext": CMakeBuild},
     package_data={
-        'orbslam3': ['*.so', '*.pyd', '*.dylib'], 
+        'pywrapped_orbslam3': ['*.so', '*.pyd', '*.dylib'], 
     },
     include_package_data=True,
     zip_safe=False,
-    extras_require={"test": ["pytest>=6.0", "pyyaml>=5.4"]},
-    python_requires=">=3.8",
 )

@@ -1,4 +1,4 @@
-import orbslam3
+import pywrapped_orbslam3
 import argparse
 from glob import glob
 import os 
@@ -11,7 +11,7 @@ parser.add_argument("--dataset_path", required=True)
 args = parser.parse_args()
 
 img_files = sorted(glob(os.path.join(args.dataset_path, 'rgb/*.png')))
-slam = orbslam3.System(args.vocab_file, args.settings_file, orbslam3.Sensor.MONOCULAR)
+slam = pywrapped_orbslam3.System(args.vocab_file, args.settings_file, pywrapped_orbslam3.Sensor.MONOCULAR)
 slam.set_use_viewer(False)
 slam.initialize()
 

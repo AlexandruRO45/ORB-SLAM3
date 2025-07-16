@@ -1,7 +1,7 @@
 # Python Bindings for ORB-SLAM3
 
-[![PyPI version](https://img.shields.io/pypi/v/orbslam3.svg)](https://pypi.org/project/orbslam3/)
-[![Build Status](https://github.com/AlexandruRO45/ORB-SLAM3/actions/workflows/build_test.yml/badge.svg)](https://github.com/alexandrusava/ORB-SLAM3/actions/workflows/build_test.yml)
+[![PyPI version](https://img.shields.io/pypi/v/pywrapped_orbslam3.svg)](https://pypi.org/project/pywrapped_orbslam3/)
+[![Build Status](https://github.com/AlexandruRO45/ORB-SLAM3/actions/workflows/build_test.yml/badge.svg)](https://github.com/AlexandruRO45/ORB-SLAM3/actions/workflows/build_test.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 This package provides a more up-to-date, pre-compiled Python bindings from the original repo **ORB-SLAM3-PYTHON** that has been inactive for years.
@@ -10,33 +10,20 @@ This wrapper allows seamless integration of SLAM and Global Visual Odometry func
 
 ## Key Features
 
-* **Pre-compiled Wheels**: No need for a C++ toolchain on the user's machine. `pip install orbslam3` just works on Linux (tested), Windows, and macOS.
-* **Numpy Integration**: Easily pass images and receive poses as `numpy.ndarray` objects.
+* **Pre-compiled Wheels**: No need for a C++ toolchain on the user's machine. `pip install pywrapped_orbslam3` just works on Linux (tested), Windows, and macOS.
 * **Simple API**: A straightforward class-based interface for initializing the SLAM system and processing frames.
-* **Supports Standard Datasets**: Comes with example configurations for popular datasets like TUM, KITTI, and EuRoC.
-
-## System Dependencies
-
-While the Python package is self-contained, ORB-SLAM3 relies on a few system-level libraries to function. You must install them using your system's package manager.
-
-**On Debian/Ubuntu:**
-
-```bash
-sudo apt-get update
-sudo apt-get install -y libopencv-dev libeigen3-dev
-```
-
-
-**On macOS (using Homebrew):**
-```bash
-brew install opencv eigen
-```
+* **Refactoring ORB-SLAM3 algorithm**: The source code of the ORB-SLAM3 includes now depth mapping, pcl features and headless mode integration (no viewer or Pangolin needed)
 
 ## Installation
 
 Once the system dependencies are installed, you can install the package from PyPI:
 ```bash
-pip install orbslam3
+pip install pywrapped_orbslam3
+```
+
+Or you can do it locally using inside the source directory:
+```bash
+pip install .
 ```
 
 <details>
