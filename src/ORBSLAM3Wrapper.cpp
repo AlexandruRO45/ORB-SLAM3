@@ -443,19 +443,6 @@ PYBIND11_MODULE(_core, m)
         .def_readonly("w", &ORB_SLAM3::IMU::Point::w)  // Gyroscope
         .def_readonly("t", &ORB_SLAM3::IMU::Point::t); // Timestamp
 
-    // --- MapNodeData struct Binding ---
-    py::class_<MapNodeData>(m, "MapNodeData")
-        .def(py::init<>())
-        .def_readwrite("id", &MapNodeData::id)
-        .def_readwrite("pose", &MapNodeData::pose)
-        .def_readwrite("timestamp", &MapNodeData::timestamp);
-
-    py::class_<MapEdgeData>(m, "MapEdgeData")
-        .def(py::init<>())
-        .def_readwrite("from_node_id", &MapEdgeData::from_node_id)
-        .def_readwrite("to_node_id", &MapEdgeData::to_node_id)
-        .def_readwrite("weight", &MapEdgeData::weight);
-
     // --- Main Class Binding ---
     py::class_<ORBSLAM3Python>(m, "system")
         // Lifecycle
@@ -478,7 +465,6 @@ PYBIND11_MODULE(_core, m)
         .def("get_pose", &ORBSLAM3Python::get_pose, "Returns pose as a 4x4 Eigen Matrix.")
         .def("get_trajectory", &ORBSLAM3Python::getTrajectory)
         .def("get_2d_occmap", &ORBSLAM3Python::get2DOccMap)
-        .def("get_map_graph", &ORBSLAM3Python::getMapGraph, "Returns the map graph as a tuple of node and edge lists.");
 
         // Map Reset Detection
         .def("was_map_reset", &ORBSLAM3Python::wasMapReset)
